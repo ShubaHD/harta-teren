@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet styles - required for map to render */
+@import "leaflet/dist/leaflet.css";
+@import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  min-height: 300px;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
