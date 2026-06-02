@@ -12,10 +12,13 @@ export default async function ProiectePage() {
 
   const { data: pointCounts } = await supabase
     .from("drill_points")
-    .select("project_id");
+    .select("project_id")
+    .limit(50000);
   const countByProject = (pointCounts ?? []).reduce(
     (acc, p) => {
-      acc[p.project_id] = (acc[p.project_id] ?? 0) + 1;
+      if (p?.project_id == null) return acc;
+      const pid = String(p.project_id);
+      acc[pid] = (acc[pid] ?? 0) + 1;
       return acc;
     },
     {} as Record<string, number>
@@ -60,7 +63,7 @@ export default async function ProiectePage() {
                   <DeleteProjectButton
                     projectId={p.id}
                     projectName={p.name}
-                    pointsCount={countByProject[p.id] ?? 0}
+                    pointsCount={countByProject[String(p.id)] ?? 0}
                   />
                 </td>
               </tr>

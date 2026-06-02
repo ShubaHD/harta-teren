@@ -23,7 +23,7 @@ const users = [
   { email: "echipa1@harta.local", password: "echipa1", role: "team", team_name: "echipa1" },
   { email: "echipa2@harta.local", password: "echipa2", role: "team", team_name: "echipa2" },
   { email: "echipa3@harta.local", password: "echipa3", role: "team", team_name: "echipa3" },
-  { email: "admin@harta.local", password: "admin123", role: "admin", team_name: null },
+  { email: "admin@harta.local", password: "Calan2025", role: "admin", team_name: null },
 ];
 
 async function main() {

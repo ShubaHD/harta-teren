@@ -1,4 +1,5 @@
 -- Annotații pe hartă: linii, săgeți, semne, text
+-- Obligatoriu pe proiectul Supabase (ex. Vercel) – fără acest tabel apare 404 la /rest/v1/map_annotations
 CREATE TABLE IF NOT EXISTS map_annotations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

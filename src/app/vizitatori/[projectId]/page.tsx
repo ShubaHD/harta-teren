@@ -2,6 +2,10 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import VisitorView from "@/components/VisitorView";
 
+// Lista de puncte trebuie mereu proaspătă (ex. după ștergere în admin)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function VizitatoriPage({
   params,
 }: {
@@ -12,7 +16,7 @@ export default async function VizitatoriPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name")
+    .select("id, name, topic, location, client")
     .eq("id", projectId)
     .single();
 
@@ -27,7 +31,7 @@ export default async function VizitatoriPage({
   return (
     <VisitorView
       projectId={projectId}
-      projectName={project.name}
+      project={project}
       points={points ?? []}
     />
   );

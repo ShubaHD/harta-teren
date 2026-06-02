@@ -3,24 +3,38 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { DrillPoint } from "@/lib/types";
+import { cachePoints, getCachedPoints } from "@/lib/offline-store";
+import PointsDashboardTable from "./PointsDashboardTable";
 
 const VisitorMap = dynamic(() => import("./VisitorMap"), { ssr: false });
 
 interface VisitorViewProps {
   projectId: string;
-  projectName: string;
+  project: { name: string; topic?: string | null; location?: string | null; client?: string | null };
   points: DrillPoint[];
 }
 
-export default function VisitorView({ projectId, projectName, points: initialPoints }: VisitorViewProps) {
+export default function VisitorView({ projectId, project, points: initialPoints }: VisitorViewProps) {
+  const projectName = project.name;
   const [points, setPoints] = useState(initialPoints);
+  const [showTable, setShowTable] = useState(false);
+
+  useEffect(() => {
+    cachePoints(projectId, initialPoints);
+  }, [projectId, initialPoints]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      const res = await fetch(`/api/vizitatori/${projectId}`);
-      if (res.ok) {
-        const { points: fresh } = await res.json();
-        setPoints(fresh);
+      try {
+        const res = await fetch(`/api/vizitatori/${projectId}`);
+        if (res.ok) {
+          const { points: fresh } = await res.json();
+          setPoints(fresh);
+          await cachePoints(projectId, fresh);
+        }
+      } catch {
+        const cached = await getCachedPoints(projectId);
+        if (cached) setPoints(cached);
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -29,13 +43,20 @@ export default function VisitorView({ projectId, projectName, points: initialPoi
   const completed = points.filter((p) => p.status === "finalizat");
 
   function exportCsv() {
+    const esc = (v: string | null | undefined) =>
+      String(v ?? "").includes(",") ? `"${String(v ?? "").replace(/"/g, '""')}"` : String(v ?? "");
     const rows = [
+      ["Nume proiect", esc(projectName)],
+      ["Beneficiar", esc(project.client)],
+      ["Tema", esc(project.topic)],
+      ["Locatie", esc(project.location)],
+      [] as string[],
       ["code", "lat", "lng", "status", "echipa", "adancime_finala", "finalizat_la"],
       ...completed.map((p) => [
-        p.code,
-        p.lat,
-        p.lng,
-        p.status,
+        String(p.code),
+        String(p.lat),
+        String(p.lng),
+        String(p.status),
         p.assigned_team ?? "",
         p.final_depth ?? "",
         p.completed_at ? new Date(p.completed_at).toISOString() : "",
@@ -51,20 +72,43 @@ export default function VisitorView({ projectId, projectName, points: initialPoi
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="flex items-center justify-between px-4 py-2 bg-white border-b shrink-0">
-        <h1 className="font-semibold text-slate-800">{projectName} — Vizitatori</h1>
-        <button
-          onClick={exportCsv}
-          disabled={completed.length === 0}
-          className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Export CSV ({completed.length} foraje executate)
-        </button>
+    <div className="min-h-screen app-fullscreen flex flex-col bg-slate-50">
+      <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-white border-b shrink-0 safe-area-left safe-area-right">
+        <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate min-w-0 max-w-[50%] sm:max-w-none" title={`${projectName} — Vizitatori`}>
+          {projectName} — Vizitatori
+        </h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowTable(!showTable)}
+            className="text-xs px-2 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0"
+          >
+            {showTable ? "Ascunde tabel" : "Arată tabel"}
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="text-xs sm:text-sm px-3 py-2 min-h-[44px] inline-flex items-center bg-green-600 text-white rounded-lg hover:bg-green-700 shrink-0 whitespace-nowrap touch-manipulation"
+          >
+            Export CSV ({completed.length})
+          </button>
+        </div>
       </header>
-      <main className="flex-1 min-h-[300px]">
-        <VisitorMap points={points} projectId={projectId} />
-      </main>
+      <div className="flex-1 min-h-0 flex flex-col p-3 gap-3 overflow-hidden">
+        {showTable && (
+          <div className="shrink-0 overflow-auto" style={{ maxHeight: "45vh" }}>
+            <PointsDashboardTable
+              points={points}
+              variant="compact"
+              linkToForaj={false}
+              tableMaxHeight="30vh"
+            />
+          </div>
+        )}
+        <div className="flex-1 min-h-[250px] rounded-lg overflow-hidden border bg-white shrink-0">
+          <VisitorMap points={points} projectId={projectId} />
+        </div>
+      </div>
     </div>
   );
 }

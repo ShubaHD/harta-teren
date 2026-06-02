@@ -30,10 +30,7 @@ export default async function HomePage() {
           Puncte de foraj
         </p>
         <LoginForm />
-        <p className="mt-4 text-center text-xs text-slate-500">
-          admin@harta.local / admin123 &nbsp;|&nbsp; echipa1@harta.local / echipa1
-        </p>
-        <p className="mt-2 text-center">
+        <p className="mt-4 text-center">
           <Link href="/vizitatori" className="text-sm text-blue-600 hover:underline">
             Vizitatori / Beneficiari →
           </Link>

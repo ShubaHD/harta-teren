@@ -1,0 +1,15 @@
+---
+description: La modificări, nu schimba sau strica funcționalități care deja funcționează
+alwaysApply: true
+---
+
+# Nu strica ce funcționează
+
+Când faci modificări în proiect:
+
+1. **Schimbări țintite** – modifică doar codul necesar pentru cerința curentă. Nu reface funcții, fișiere sau fluxuri care nu sunt implicate.
+2. **Evită refactorizări inutile** – nu rescrie cod doar pentru „îmbunătățiri” de stil, redenumiri sau consistență, dacă utilizatorul nu a cerut asta.
+3. **Păstrează comportamentul existent** – pentru fluxuri care deja merg (login, hartă online, fișă foraj, offline, sincronizare), nu schimba logica decât dacă e necesar pentru un bug sau o cerință explicită.
+4. **După modificări** – verifică că partea afectată încă funcționează; sugerează pași scurți de verificare dacă e cazul.
+
+Prioritate: **stabilitate** – nu introduce regresii în funcționalități existente.

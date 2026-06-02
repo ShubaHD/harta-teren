@@ -2,20 +2,35 @@
   "name": "harta-teren",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "dev:3001": "next dev -p 3001",
+    "build": "(npm run pwa:icons || true) && next build",
+    "pwa:icons": "npx tsx scripts/generate-pwa-icons.ts",
     "start": "next start",
+    "start:3001": "next start -p 3001",
+    "start:3002": "next start -p 3002",
     "lint": "next lint",
     "seed:users": "npx tsx scripts/seed-users.ts",
     "check:users": "npx tsx scripts/check-users.ts",
     "seed:points": "npx tsx scripts/seed-points.ts"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@geoman-io/leaflet-geoman-free": "^2.19.2",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
+    "dexie": "^4.3.0",
+    "dxf-parser": "^1.1.2",
+    "idb": "^8.0.3",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
+    "proj4": "^2.20.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1"
@@ -31,6 +46,7 @@
     "eslint-config-next": "^15.0.0",
     "next": "^14.2.18",
     "postcss": "^8.4.0",
+    "sharp": "0.32.6",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.0.0"
   }

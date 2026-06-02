@@ -17,7 +17,7 @@ export default function MapProjectSelector({ projects, selectedId }: MapProjectS
         const v = e.target.value;
         router.push(v ? `/mapa?project=${v}` : "/mapa");
       }}
-      className="text-sm border rounded px-2 py-1"
+      className="text-sm border rounded px-2 py-2 min-h-[44px] touch-manipulation"
     >
       <option value="">Selectează proiect</option>
       {projects.map((p) => (

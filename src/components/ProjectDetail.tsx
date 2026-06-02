@@ -1,10 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DrillPoint } from "@/lib/types";
+import type { DrillPoint, Project } from "@/lib/types";
 import CsvImport from "./CsvImport";
 import DeletePointButton from "./DeletePointButton";
 import DeleteProjectButton from "./DeleteProjectButton";
+import ResetPointStatusButton from "./ResetPointStatusButton";
+import PointsDashboardTable from "./PointsDashboardTable";
+import PipelineGeoJsonImport from "./PipelineGeoJsonImport";
+import { fetchAndCacheDrillPointDetail } from "@/lib/offline-form-sync";
+import { resolvePhotosForExport } from "@/lib/resolve-export-photos";
+import { exportZipAsBlob, addForajToZip } from "@/lib/export-foraj";
+import JSZip from "jszip";
 
 interface Stats {
   total: number;
@@ -15,35 +23,120 @@ interface Stats {
 
 interface ProjectDetailProps {
   projectId: string;
-  projectName: string;
+  project: Project;
   points: DrillPoint[];
   stats: Stats;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  de_facut: "De făcut",
-  in_lucru: "În lucru",
-  finalizat: "Finalizat",
-};
+function sanitizeForFile(s: string): string {
+  return s.replace(/[<>:"/\\|?*]/g, "_").replace(/\s+/g, "_").slice(0, 80);
+}
 
 export default function ProjectDetail({
   projectId,
-  projectName,
+  project,
   points,
   stats,
 }: ProjectDetailProps) {
   const router = useRouter();
+  const projectName = project.name;
+  const [generatingPointId, setGeneratingPointId] = useState<string | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [zipError, setZipError] = useState<string | null>(null);
 
   const completed = points.filter((p) => p.status === "finalizat");
 
+  async function handleGenerateZipForPoint(point: DrillPoint) {
+    setGeneratingPointId(point.id);
+    setZipError(null);
+    try {
+      const detail = await fetchAndCacheDrillPointDetail(point.id);
+      const photos = await resolvePhotosForExport(
+        point.id,
+        detail?.boreholePhotos ?? []
+      );
+      const { blob, filename } = await exportZipAsBlob({
+        point: detail?.point ?? point,
+        project,
+        detail,
+        photos,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setZipError(err instanceof Error ? err.message : "Eroare la generare ZIP");
+    } finally {
+      setGeneratingPointId(null);
+    }
+  }
+
+  async function handleGenerateZipForAll() {
+    if (completed.length === 0) return;
+    setGeneratingAll(true);
+    setZipError(null);
+    try {
+      const zip = new JSZip();
+      const folderName = sanitizeForFile(`${projectName}_ToateForajele`);
+      const timestamp = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace(/[-:T]/g, "")
+        .slice(0, 12);
+
+      for (const point of completed) {
+        const detail = await fetchAndCacheDrillPointDetail(point.id);
+        const photos = await resolvePhotosForExport(
+          point.id,
+          detail?.boreholePhotos ?? []
+        );
+        const subfolderName = sanitizeForFile(`Foraj_${point.code}`);
+        await addForajToZip(
+          zip,
+          {
+            point: detail?.point ?? point,
+            project,
+            detail,
+            photos,
+          },
+          subfolderName,
+          { bundleMode: true }
+        );
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const filename = `${folderName}_${timestamp}.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setZipError(err instanceof Error ? err.message : "Eroare la generare ZIP");
+    } finally {
+      setGeneratingAll(false);
+    }
+  }
+
   function exportCsv() {
+    const esc = (v: string | null | undefined) =>
+      String(v ?? "").includes(",") ? `"${String(v ?? "").replace(/"/g, '""')}"` : String(v ?? "");
     const rows = [
+      ["Nume proiect", esc(projectName)],
+      ["Beneficiar", esc(project.client)],
+      ["Tema", esc(project.topic)],
+      ["Locatie", esc(project.location)],
+      [] as string[],
       ["code", "lat", "lng", "status", "echipa", "adancime_finala", "finalizat_la"],
       ...completed.map((p) => [
-        p.code,
-        p.lat,
-        p.lng,
-        p.status,
+        String(p.code),
+        String(p.lat),
+        String(p.lng),
+        String(p.status),
         p.assigned_team ?? "",
         p.final_depth ?? "",
         p.completed_at ? new Date(p.completed_at).toISOString() : "",
@@ -54,19 +147,31 @@ export default function ProjectDetail({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `foraje-executate-${projectName.replace(/\s+/g, "-")}.csv`;
+    a.download = `foraje-executate-${projectName.replace(/\s+/g, "-").replace(/[<>:"/\\|?*]/g, "_")}.csv`;
     a.click();
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end gap-2">
+      {zipError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+          {zipError}
+        </div>
+      )}
+      <div className="flex flex-wrap justify-end gap-2">
         <button
           onClick={exportCsv}
-          disabled={completed.length === 0}
-          className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-sm px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700"
         >
           Export CSV ({completed.length} foraje executate)
+        </button>
+        <button
+          onClick={handleGenerateZipForAll}
+          disabled={generatingAll || completed.length === 0}
+          title={completed.length === 0 ? "Adaugă foraje finalizate pentru a genera ZIP" : undefined}
+          className="text-sm px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shrink-0"
+        >
+          {generatingAll ? "Se generează..." : `Generează ZIP pentru toate (${completed.length})`}
         </button>
         <DeleteProjectButton
           projectId={projectId}
@@ -75,76 +180,40 @@ export default function ProjectDetail({
           onDeleted={() => router.push("/admin/proiecte")}
         />
       </div>
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border p-4">
-          <p className="text-sm text-slate-600">Total</p>
-          <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-        </div>
-        <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-          <p className="text-sm text-blue-700">De făcut</p>
-          <p className="text-2xl font-bold text-blue-800">{stats.de_facut}</p>
-        </div>
-        <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
-          <p className="text-sm text-amber-700">În lucru</p>
-          <p className="text-2xl font-bold text-amber-800">{stats.in_lucru}</p>
-        </div>
-        <div className="bg-green-50 rounded-lg border border-green-200 p-4">
-          <p className="text-sm text-green-700">Finalizat</p>
-          <p className="text-2xl font-bold text-green-800">{stats.finalizat}</p>
-        </div>
-      </section>
-
       <CsvImport projectId={projectId} onImportComplete={() => router.refresh()} />
+      <PipelineGeoJsonImport
+        projectId={projectId}
+        onImportComplete={() => router.refresh()}
+      />
 
-      <section className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        <h2 className="px-4 py-3 font-semibold text-slate-800 border-b">
-          Puncte ({points.length})
-        </h2>
-        <div className="overflow-x-auto max-h-[50vh] overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 sticky top-0">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium text-slate-700">Cod</th>
-                <th className="px-4 py-2 text-left font-medium text-slate-700">Status</th>
-                <th className="px-4 py-2 text-left font-medium text-slate-700">Echipă</th>
-                <th className="px-4 py-2 text-left font-medium text-slate-700">Adâncime finală</th>
-                <th className="px-4 py-2 text-left font-medium text-slate-700">Finalizat</th>
-                <th className="px-4 py-2 text-right font-medium text-slate-700">Acțiuni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points.map((p) => (
-                <tr key={p.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-2 font-mono">{p.code}</td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        p.status === "de_facut"
-                          ? "bg-blue-100 text-blue-800"
-                          : p.status === "in_lucru"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {STATUS_LABELS[p.status] ?? p.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">{p.assigned_team ?? "—"}</td>
-                  <td className="px-4 py-2">{p.final_depth ?? "—"}</td>
-                  <td className="px-4 py-2 text-slate-600">
-                    {p.completed_at
-                      ? new Date(p.completed_at).toLocaleString("ro")
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <DeletePointButton pointId={p.id} onDeleted={() => router.refresh()} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <PointsDashboardTable
+        points={points}
+        stats={stats}
+        linkToForaj={true}
+        tableMaxHeight="50vh"
+        renderActions={(p) => (
+          <span className="inline-flex items-center gap-1 flex-wrap justify-end">
+            {p.status === "finalizat" && (
+              <button
+                type="button"
+                onClick={() => handleGenerateZipForPoint(p)}
+                disabled={generatingPointId !== null}
+                className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generatingPointId === p.id ? "..." : "Generează ZIP"}
+              </button>
+            )}
+            {p.status !== "de_facut" && (
+              <ResetPointStatusButton
+                pointId={p.id}
+                pointCode={p.code}
+                onReset={() => router.refresh()}
+              />
+            )}
+            <DeletePointButton pointId={p.id} onDeleted={() => router.refresh()} />
+          </span>
+        )}
+      />
     </div>
   );
 }

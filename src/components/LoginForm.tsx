@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { saveProfileForOffline } from "@/lib/offline-service";
+
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -16,14 +19,43 @@ export default function LoginForm() {
       email,
       password,
     });
-    setLoading(false);
     if (err) {
-      setError(err.message);
+      setLoading(false);
+      const isNetworkError =
+        err.message === "Failed to fetch" ||
+        err.message?.toLowerCase().includes("network") ||
+        err.message?.toLowerCase().includes("fetch");
+      setError(
+        isNetworkError
+          ? "Nu există conexiune la internet. Conectează-te la rețea și încearcă din nou."
+          : err.message
+      );
       return;
     }
+    const userId = data.user?.id;
+    if (userId) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("team_name, role")
+          .eq("id", userId)
+          .single();
+        await saveProfileForOffline({
+          userId,
+          teamName: profile?.team_name ?? null,
+          isAdmin: profile?.role === "admin",
+        });
+      } catch {
+        await saveProfileForOffline({
+          userId,
+          teamName: null,
+          isAdmin: false,
+        });
+      }
+    }
+    setLoading(false);
     const role = data.user?.user_metadata?.role as string | undefined;
     const target = role === "admin" ? "/admin" : "/mapa";
-    // Full page reload ensures cookies are sent and server sees the session
     window.location.href = target;
   }
 

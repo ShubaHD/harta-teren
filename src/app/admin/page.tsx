@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const { data: projects } = await supabase
@@ -8,20 +10,22 @@ export default async function AdminPage() {
     .select("id, name")
     .order("created_at", { ascending: false });
 
-  const { data: points } = await supabase
-    .from("drill_points")
-    .select("id, project_id, status");
-
-  const statsByProject = (projects ?? []).map((p) => {
-    const projectPoints = (points ?? []).filter((pt) => pt.project_id === p.id);
-    return {
-      project: p,
-      total: projectPoints.length,
-      de_facut: projectPoints.filter((pt) => pt.status === "de_facut").length,
-      in_lucru: projectPoints.filter((pt) => pt.status === "in_lucru").length,
-      finalizat: projectPoints.filter((pt) => pt.status === "finalizat").length,
-    };
-  });
+  const statsByProject = await Promise.all(
+    (projects ?? []).map(async (p) => {
+      const { data: projectPoints } = await supabase
+        .from("drill_points")
+        .select("id, status")
+        .eq("project_id", p.id);
+      const pts = projectPoints ?? [];
+      return {
+        project: p,
+        total: pts.length,
+        de_facut: pts.filter((pt) => pt.status === "de_facut").length,
+        in_lucru: pts.filter((pt) => pt.status === "in_lucru").length,
+        finalizat: pts.filter((pt) => pt.status === "finalizat").length,
+      };
+    })
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -43,6 +47,7 @@ export default async function AdminPage() {
                 <div className="bg-slate-50 rounded-lg border p-3">
                   <p className="text-sm text-slate-600">Total puncte</p>
                   <p className="text-xl font-bold text-slate-800">{total}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">unice (cod nr)</p>
                 </div>
                 <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
                   <p className="text-sm text-blue-700">De făcut</p>

@@ -56,20 +56,26 @@ export default function CsvImport({ projectId, onImportComplete }: CsvImportProp
     setImporting(true);
     const supabase = createClient();
 
-    const toInsert = parsed.map((p) => ({
-      project_id: projectId,
-      code: p.code,
-      lat: p.lat,
-      lng: p.lng,
-      notes: p.notes,
-      status: "de_facut",
-    }));
+    const byCode = new Map<string, { project_id: string; code: string; lat: number; lng: number; notes: string | null; kilometraj: string | null; elevation_h: string | null; adancime_propusa: string | null }>();
+    for (const p of parsed) {
+      byCode.set(p.code, {
+        project_id: projectId,
+        code: p.code,
+        lat: p.lat,
+        lng: p.lng,
+        notes: p.notes,
+        kilometraj: p.kilometraj?.trim() || null,
+        elevation_h: p.elevation_h?.trim() || null,
+        adancime_propusa: p.adancime_propusa?.trim() || null,
+      });
+    }
+    const toUpsert = Array.from(byCode.values());
 
     const { data, error: insertError } = await supabase
       .from("drill_points")
-      .upsert(toInsert, {
+      .upsert(toUpsert, {
         onConflict: "project_id,code",
-        ignoreDuplicates: true,
+        ignoreDuplicates: false,
       })
       .select("id");
 
@@ -78,12 +84,10 @@ export default function CsvImport({ projectId, onImportComplete }: CsvImportProp
       setError(insertError.message);
       return;
     }
-    const inserted = data?.length ?? 0;
-    const skipped = parsed.length - inserted;
+    const updated = data?.length ?? 0;
+    const duplicateCount = parsed.length - toUpsert.length;
     setSuccess(
-      inserted > 0
-        ? `Import reușit: ${inserted} puncte${skipped > 0 ? ` (${skipped} duplicate omise)` : ""}.`
-        : "Toate punctele există deja."
+      `Import reușit: ${updated} puncte.${duplicateCount > 0 ? ` (${duplicateCount} coduri duplicate din CSV au fost ignorate – s-a păstrat ultima apariție per cod)` : ""}`
     );
     setFile(null);
     setParsed([]);
@@ -98,10 +102,15 @@ export default function CsvImport({ projectId, onImportComplete }: CsvImportProp
       </h2>
       <div className="p-4 space-y-4">
         <p className="text-sm text-slate-600">
-          Format: <code className="bg-slate-100 px-1 rounded">nr,n,e,h</code> sau cu coloane opționale{" "}
-          <code className="bg-slate-100 px-1 rounded">observatii,observatii2,observatii3</code>.
+          Format: <code className="bg-slate-100 px-1 rounded">nr,n,e,h</code> (coloana <strong>h</strong>, coloana D, = adâncime propusă la Raportare) sau cu{" "}
+          <code className="bg-slate-100 px-1 rounded">km,observatii</code>.
           Coordonate în DMS (ex: 44°37&apos;40&quot;N) sau grade zecimale.
           Fișiere Excel: salvează ca „CSV UTF-8” pentru simboluri corecte.
+        </p>
+        <p className="text-xs text-slate-500">
+          Total puncte în Dashboard = puncte unice per proiect (per cod <code className="bg-slate-100 px-0.5">nr</code>). 
+          Dacă același CSV dă totaluri diferite la două proiecte, verifică că ambele au fost importate cu același fișier; 
+          rândurile cu cod duplicat în CSV sau deja existent în proiect sunt omise.
         </p>
         <div className="flex flex-wrap gap-4 items-center">
           <input

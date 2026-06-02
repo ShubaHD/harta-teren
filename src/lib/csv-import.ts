@@ -26,6 +26,11 @@ export interface ParsedDrillPoint {
   lat: number;
   lng: number;
   notes: string | null;
+  kilometraj: string | null;
+  /** Cota / elevație – coloană opțională elevatie/elevation (h = doar adâncime propusă) */
+  elevation_h: string | null;
+  /** Adâncime propusă (m) – vine doar din coloana h (coloana D) */
+  adancime_propusa: string | null;
 }
 
 /**
@@ -50,25 +55,27 @@ export function parseCsvRow(
 
   if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return null;
 
-  const h = getCol("h");
-  const km = getCol("km");
+  const hRaw = getCol("h");
+  const adancime_propusa = hRaw?.trim() || null;
+  const elevatieRaw = getCol("elevatie") || getCol("elevation");
+  const elevation_h = elevatieRaw?.trim() || null;
+  const kilometrajRaw = getCol("km") || getCol("kilometraj");
+  const kilometraj = kilometrajRaw?.trim() || null;
   const obs1 = getCol("observatii") || getCol("observatii1");
   const obs2 = getCol("observatii2");
   const obs3 = getCol("observatii3");
-  const parts: string[] = [];
-  if (h) {
-    const hNum = parseFloat(h);
-    parts.push(isNaN(hNum) ? `h: ${h}` : `h: ${h} m`);
-  }
-  if (km) parts.push(`km: ${km}`);
-  [obs1, obs2, obs3].filter(Boolean).forEach((o) => parts.push(o));
-  const notes = parts.length ? parts.join("\n") : null;
+  const notes = [obs1, obs2, obs3].filter(Boolean).length
+    ? [obs1, obs2, obs3].filter(Boolean).join("\n")
+    : null;
 
   return {
     code: code.replace(/\s+/g, " ").trim(),
     lat,
     lng,
     notes,
+    kilometraj,
+    elevation_h,
+    adancime_propusa,
   };
 }
 

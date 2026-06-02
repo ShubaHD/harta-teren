@@ -1,0 +1,1 @@
+!function(){let e="[Offline] [sw:fetch]";self.addEventListener("fetch",t=>{let n=t.request.url,o=t.request.mode;try{let e=new URL(n);if(self.location.origin!==e.origin)return}catch(e){return}"navigate"===o||"document"===t.request.destination?console.log("".concat(e," document ").concat(n)):"same-origin"===o&&console.log("".concat(e," same-origin ").concat(n))})}();

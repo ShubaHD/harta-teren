@@ -13,7 +13,7 @@ export default async function ProjectDetailPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name")
+    .select("id, name, topic, location, client, created_at")
     .eq("id", id)
     .single();
 
@@ -55,7 +55,7 @@ export default async function ProjectDetailPage({
       </div>
       <ProjectDetail
         projectId={id}
-        projectName={project.name}
+        project={project}
         points={points ?? []}
         stats={stats}
       />

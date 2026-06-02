@@ -17,6 +17,13 @@ export default function ProjectSelectScreen({ projects }: ProjectSelectScreenPro
       <p className="text-sm text-slate-600 mb-6">
         Un cont, toate proiectele. Selectează proiectul activ.
       </p>
+      <button
+        onClick={() => router.push("/fisa-foraj")}
+        className="w-full max-w-sm mb-4 px-6 py-4 rounded-lg bg-blue-50 border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-100 text-left font-medium text-slate-800 transition-colors flex items-center gap-2"
+      >
+        <span>📋</span>
+        Fișa de foraj
+      </button>
       <div className="grid gap-3 w-full max-w-sm">
         {projects.map((p) => (
           <button

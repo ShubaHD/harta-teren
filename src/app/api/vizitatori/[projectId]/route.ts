@@ -30,5 +30,8 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ project, points: points ?? [] });
+  return NextResponse.json(
+    { project, points: points ?? [] },
+    { headers: { "Cache-Control": "no-store, max-age=0" } }
+  );
 }

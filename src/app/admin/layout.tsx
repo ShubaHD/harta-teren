@@ -38,6 +38,16 @@ export default async function AdminLayout({
           <Link href="/vizitatori" target="_blank" className="text-sm text-slate-600 hover:text-blue-600">
             Vizitatori
           </Link>
+          <Link href="/admin/export" className="text-sm text-slate-600 hover:text-blue-600">
+            Export
+          </Link>
+          <a
+            href="/api/admin/backup"
+            download
+            className="text-sm text-slate-600 hover:text-blue-600"
+          >
+            Backup
+          </a>
         </nav>
         <form action="/auth/signout" method="post">
           <button type="submit" className="text-sm text-slate-600 hover:text-slate-800">

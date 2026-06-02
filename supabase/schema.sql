@@ -1,10 +1,11 @@
--- Harta Teren - Drill Points Management
--- Run this in Supabase SQL Editor
+-- Harta Teren - Schema completă pentru Supabase
+-- Rulează în Supabase: Dashboard → SQL Editor → New query → paste → Run
+-- (Pe un proiect existent, unele comenzi pot da erori „already exists” – poți ignora sau rula doar secțiunile care lipsesc.)
 
--- Enable UUID extension
+-- ========== Extensii ==========
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Profiles (linked to auth.users)
+-- ========== Tabel profiles ==========
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
@@ -14,10 +15,47 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Drill points
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "users_read_own_profile" ON profiles;
+CREATE POLICY "users_read_own_profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "users_insert_own_profile" ON profiles;
+CREATE POLICY "users_insert_own_profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- ========== Tabel projects ==========
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  topic TEXT,
+  location TEXT,
+  client TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "admin_all_projects" ON projects;
+CREATE POLICY "admin_all_projects" ON projects FOR ALL
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "teams_read_projects" ON projects;
+CREATE POLICY "teams_read_projects" ON projects FOR SELECT
+  USING (true);
+
+-- Proiect implicit (opțional, dacă ai puncte fără proiect)
+INSERT INTO projects (id, name) VALUES
+  ('00000000-0000-0000-0000-000000000001'::uuid, 'Proiect implicit')
+ON CONFLICT (id) DO NOTHING;
+
+-- ========== Tabel drill_points ==========
 CREATE TABLE IF NOT EXISTS drill_points (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  code TEXT UNIQUE NOT NULL,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
+  code TEXT NOT NULL,
   lat NUMERIC NOT NULL,
   lng NUMERIC NOT NULL,
   status TEXT NOT NULL DEFAULT 'de_facut' CHECK (status IN ('de_facut', 'in_lucru', 'finalizat')),
@@ -30,55 +68,91 @@ CREATE TABLE IF NOT EXISTS drill_points (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for faster status/team queries
+-- Cod unic per proiect (același cod poate exista în proiecte diferite)
+ALTER TABLE drill_points DROP CONSTRAINT IF EXISTS drill_points_code_key;
+DROP INDEX IF EXISTS drill_points_project_code_unique;
+CREATE UNIQUE INDEX IF NOT EXISTS drill_points_project_code_unique ON drill_points(project_id, code);
+
 CREATE INDEX IF NOT EXISTS idx_drill_points_status ON drill_points(status);
 CREATE INDEX IF NOT EXISTS idx_drill_points_assigned_team ON drill_points(assigned_team);
+CREATE INDEX IF NOT EXISTS idx_drill_points_project ON drill_points(project_id);
 
--- RLS
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE drill_points ENABLE ROW LEVEL SECURITY;
 
--- Profiles: users can read their own
-CREATE POLICY "users_read_own_profile" ON profiles
-  FOR SELECT USING (auth.uid() = id);
-
--- Profiles: allow insert on signup (via trigger)
-CREATE POLICY "users_insert_own_profile" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Drill points: admin sees all
+DROP POLICY IF EXISTS "admin_read_all_points" ON drill_points;
 CREATE POLICY "admin_read_all_points" ON drill_points
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- Drill points: teams see non-finalized OR their own assigned
+DROP POLICY IF EXISTS "teams_read_points" ON drill_points;
 CREATE POLICY "teams_read_points" ON drill_points
-  FOR SELECT USING (
-    status != 'finalizat'
-    OR assigned_team = (SELECT team_name FROM profiles WHERE id = auth.uid())
-  );
+  FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'team'));
 
--- Drill points: admin can insert
+DROP POLICY IF EXISTS "admin_insert_points" ON drill_points;
 CREATE POLICY "admin_insert_points" ON drill_points
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- Drill points: admin can update all
+DROP POLICY IF EXISTS "admin_update_all_points" ON drill_points;
 CREATE POLICY "admin_update_all_points" ON drill_points
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- Drill points: teams can update only de_facut (to claim) or their own in_lucru (to complete)
+DROP POLICY IF EXISTS "admin_delete_points" ON drill_points;
+CREATE POLICY "admin_delete_points" ON drill_points
+  FOR DELETE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "teams_update_points" ON drill_points;
 CREATE POLICY "teams_update_points" ON drill_points
-  FOR UPDATE USING (
+  FOR UPDATE
+  USING (
     status = 'de_facut'
-    OR (status = 'in_lucru' AND assigned_team = (SELECT team_name FROM profiles WHERE id = auth.uid()))
+    OR (
+      status IN ('in_lucru', 'finalizat')
+      AND (
+        LOWER(TRIM(COALESCE(assigned_team, ''))) = LOWER(TRIM(COALESCE((SELECT team_name FROM profiles WHERE id = auth.uid()), '')))
+        OR TRIM(COALESCE(assigned_team, '')) = ''
+      )
+    )
+  )
+  WITH CHECK (true);
+
+-- ========== Tabel map_annotations (linii, săgeți, semne pe hartă) ==========
+CREATE TABLE IF NOT EXISTS map_annotations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('line', 'arrow', 'marker', 'text')),
+  geom JSONB NOT NULL,
+  properties JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_map_annotations_project ON map_annotations(project_id);
+
+ALTER TABLE map_annotations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "auth_read_annotations" ON map_annotations;
+DROP POLICY IF EXISTS "auth_insert_annotations" ON map_annotations;
+DROP POLICY IF EXISTS "auth_update_annotations" ON map_annotations;
+DROP POLICY IF EXISTS "auth_delete_annotations" ON map_annotations;
+
+CREATE POLICY "auth_read_annotations" ON map_annotations FOR SELECT
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()));
+
+CREATE POLICY "auth_insert_annotations" ON map_annotations FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()));
+
+CREATE POLICY "auth_update_annotations" ON map_annotations FOR UPDATE
+  USING (
+    created_by = auth.uid()
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
--- Trigger to create profile on signup
+CREATE POLICY "auth_delete_annotations" ON map_annotations FOR DELETE
+  USING (
+    created_by = auth.uid()
+    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- ========== Trigger: profil la signup ==========
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN

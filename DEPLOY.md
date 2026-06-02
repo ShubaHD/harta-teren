@@ -1,110 +1,99 @@
-# Deploy Harta Teren pe Vercel
+# Rebuild și Deploy – Harta Teren
 
-## Variante de deploy
+## 1. Rebuild (local)
 
-- **A)** Cu Git + GitHub – deploy automat la fiecare push (recomandat)
-- **B)** Cu Vercel CLI – fără Git, deploy manual din folder
+```bash
+npm run build
+```
+
+După build:
+- Icoane PWA: `public/icon-180.png`, `icon-192.png`, `icon-512.png`
+- Service worker: `public/sw.js`
+- Aplicația de producție: folderul `.next/`
 
 ---
 
-## 1. Pregătire Supabase (producție)
+## 2. Test local (producție)
 
-În [Supabase Dashboard](https://supabase.com/dashboard) → proiectul tău:
-
-1. **Authentication → URL Configuration**
-   - **Site URL**: `https://harta-teren-xxx.vercel.app` (vei pune URL-ul real după primul deploy)
-   - **Redirect URLs**: adaugă:
-     - `https://harta-teren-xxx.vercel.app/**`
-     - `https://*.vercel.app/**` (pentru preview-uri)
-
-## 2. Pregătire Git (obligatoriu pentru Vercel)
-
-Vercel deployează din GitHub. Dacă nu ai Git:
-
-1. Instalează [Git for Windows](https://git-scm.com/download/win)
-2. Restartează terminalul după instalare
-
-Inițializează repo și fă push pe GitHub:
-
-```powershell
-cd "c:\Users\Shuba\Desktop\HartaTeren"
-git init
-git add .
-git commit -m "Initial commit"
+```bash
+npm run start
 ```
 
-Creează un repo nou pe [github.com](https://github.com/new), apoi:
-
-```powershell
-git remote add origin https://github.com/TU_USERNAME/harta-teren.git
-git branch -M main
-git push -u origin main
-```
-
-## 3. Deploy pe Vercel
-
-1. Mergi la [vercel.com](https://vercel.com) și autentifică-te (cu GitHub)
-2. **Add New** → **Project**
-3. Importă repo-ul `harta-teren`
-4. **Configure Project**:
-   - **Framework Preset**: Next.js (detectat automat)
-   - **Root Directory**: `.` (lasă gol)
-   - **Build Command**: `npm run build` (implicit)
-   - **Output Directory**: `.next` (implicit)
-
-5. **Environment Variables** – adaugă:
-
-   | Name | Value |
-   |------|-------|
-   | `NEXT_PUBLIC_SUPABASE_URL` | URL-ul proiectului Supabase |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cheia anon (public) Supabase |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (secret!) |
-   | `NEXT_PUBLIC_SITE_URL` | `https://numele-proiectului.vercel.app` |
-
-   Găsești valorile în Supabase → **Settings** → **API**.
-
-6. Click **Deploy**
-
-## 4. După primul deploy
-
-1. Copiază URL-ul live (ex: `https://harta-teren-abc123.vercel.app`)
-2. În Supabase → **Authentication** → **URL Configuration**:
-   - Actualizează **Site URL** cu URL-ul Vercel
-   - Asigură-te că redirect URL-urile includ `https://*.vercel.app/**`
-
-## 5. Actualizări viitoare
-
-După fiecare push pe `main`:
-
-```powershell
-git add .
-git commit -m "Descriere modificare"
-git push
-```
-
-Vercel va face deploy automat. Poți adăuga taburi, funcții noi etc. – totul se actualizează la fiecare push.
+Deschide http://localhost:3000 și verifică că totul merge (login, hartă, offline).
 
 ---
 
-## Variantă B: Deploy cu Vercel CLI (fără Git)
+## 3. Deploy pe Vercel (recomandat pentru Next.js)
 
-Dacă nu folosești Git, poți deploya direct din folder:
+### Varianta A: din terminal (Vercel CLI)
 
-```powershell
-cd "c:\Users\Shuba\Desktop\HartaTeren"
-npx vercel
-```
+1. **Login** (o singură dată):
+   ```bash
+   npx vercel login
+   ```
 
-La prima rulare vei fi întrebat de login și config. Pentru producție:
+2. **Variabile de mediu** – fie le pui în `.env.production` (Vercel le citește la build), fie le setezi în dashboard-ul Vercel după primul deploy (Settings → Environment Variables):
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-```powershell
-npx vercel --prod
-```
+3. **Deploy în producție** (din folderul proiectului):
+   ```bash
+   npx vercel --prod
+   ```
+   - La prima rulare ți se pun câteva întrebări (proiect nou, setări). Poți apăsa Enter pentru default-uri.
+   - După deploy primești un URL de tip `https://harta-teren-xxx.vercel.app`.
 
-**Variabile de mediu**: După `vercel link`, adaugă-le în [vercel.com](https://vercel.com) → proiectul → **Settings** → **Environment Variables**.
+**Fără `--prod`** rulezi doar un preview (deployment de test). Cu **`--prod`** trimiți direct pe domeniul de producție.
 
-**Actualizări**: rulezi din nou `npx vercel --prod` după modificări.
+### Varianta B: din site (Git)
+
+1. Cont pe [vercel.com](https://vercel.com), conectezi repo-ul Git.
+2. Setezi Environment Variables în Settings.
+3. La fiecare push se face deploy automat (dacă ai activat).
+
+**Notă:** Build Command pe Vercel trebuie să rămână `npm run build` (din package.json), care rulează și `pwa:icons` și `next build`.
 
 ---
 
-**Notă**: Fișierul `.env.local` nu se uploadează. Variabilele de mediu se setează în Vercel (GitHub sau CLI).
+## 4. Deploy pe alt server (Node.js)
+
+Pe un VPS (Linux) sau mașină cu Node:
+
+1. Copiază pe server întregul proiect (sau doar după build: `.next/`, `public/`, `package.json`, `node_modules` sau rulează `npm ci` pe server).
+2. Variabile de mediu: setează `NEXT_PUBLIC_SUPABASE_URL` și `NEXT_PUBLIC_SUPABASE_ANON_KEY` (ex. în `.env.production` sau în shell).
+3. Rulează:
+   ```bash
+   npm ci --production=false
+   npm run build
+   npm run start
+   ```
+4. Expune portul 3000 prin nginx/apache sau un process manager (pm2):
+
+   ```bash
+   npx pm2 start npm --name "harta-teren" -- start
+   ```
+
+---
+
+## 5. După deploy
+
+- Deschide aplicația în browser și fă un test rapid: login → hartă → oprește internetul → „În lucru” / „Finalizat” → repornește internetul (sync automat).
+- Pe telefon, dacă folosești PWA: instalează aplicația de pe noul URL, apoi testează același flow offline.
+
+---
+
+## 6. Dacă offline nu funcționează
+
+1. **Reîmprospătează harta o dată când ești online**  
+   După ce ai deschis harta (cu proiect selectat), apasă **F5** (sau refresh) o dată. Astfel service worker-ul pune pagina în cache și o poate servi și offline.
+
+2. **Ordinea corectă**  
+   - Cu **internet**: intră în aplicație → Login → Harta → alege proiectul → (opțional) apasă F5 pe hartă → apoi „Pregătește offline” dacă vrei și fișele.  
+   - **Oprește internetul** (avion sau DevTools → Network → Offline).  
+   - Deschide din nou aplicația sau tab-ul cu harta – ar trebui să se încarce din cache.
+
+3. **Șterge cache-ul vechi**  
+   După un deploy nou, uneori browserul ține un service worker vechi. În Chrome: F12 → Application → Service Workers → Unregister. Reîncarcă site-ul (poate de 2 ori) ca să se înregistreze noul SW.
+
+4. **Verifică că SW e activ**  
+   F12 → Application → Service Workers. Ar trebui să apară `sw.js` cu status „activated”.

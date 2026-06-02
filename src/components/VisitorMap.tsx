@@ -35,14 +35,21 @@ interface VisitorMapProps {
   projectId?: string;
 }
 
+function isValidLatLng(lat: unknown, lng: unknown): boolean {
+  const a = Number(lat);
+  const b = Number(lng);
+  return Number.isFinite(a) && Number.isFinite(b);
+}
+
 export default function VisitorMap({ points, projectId }: VisitorMapProps) {
-  const center: [number, number] = points.length
-    ? [Number(points[0].lat), Number(points[0].lng)]
+  const validPoints = points.filter((p) => isValidLatLng(p.lat, p.lng));
+  const center: [number, number] = validPoints.length
+    ? [Number(validPoints[0].lat), Number(validPoints[0].lng)]
     : [44.37, 23.13];
 
   return (
-    <div className="h-full w-full min-h-[300px] relative">
-      <MapContainer center={center} zoom={points.length ? 12 : 8} className="h-full w-full" zoomControl={false}>
+    <div className="visitor-map h-full w-full min-h-[300px] relative">
+      <MapContainer center={center} zoom={validPoints.length ? 12 : 8} className="h-full w-full" zoomControl={false}>
         <ZoomControl position="bottomright" />
         <LayersControl position="topright">
           <BaseLayer name="Hartă" checked>
@@ -64,7 +71,7 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
             allowedTools={["marker"]}
           />
         )}
-        {points.map((p) => (
+        {validPoints.map((p) => (
           <Marker
             key={p.id}
             position={[Number(p.lat), Number(p.lng)]}
@@ -74,24 +81,29 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
               {p.code}
             </Tooltip>
             <Popup>
-              <div className="text-sm">
-                <p className="font-semibold">{p.code}</p>
+              <div className="text-sm min-w-[200px]">
+                <p className="font-semibold text-slate-800">{p.code}</p>
                 <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-600 hover:underline mb-1"
-                  title="Deschide în Google Maps"
+                  className="inline-flex items-center gap-1 text-blue-600 hover:underline mb-2 text-sm"
                 >
                   🧭 Navighează
                 </a>
-                {p.notes && (
-                  <p className="text-slate-600 mb-1 whitespace-pre-wrap">{p.notes}</p>
+                <p className="text-slate-500 text-xs mb-1">Status: {p.status}</p>
+                {(p.adancime_propusa != null && p.adancime_propusa !== "") && (
+                  <p className="text-slate-600 mb-1">Adâncime propusă (h): {p.adancime_propusa} m</p>
                 )}
-                <p className="text-slate-600">{p.status}</p>
-                {p.assigned_team && <p>Echipă: {p.assigned_team}</p>}
+                {(p.kilometraj != null && p.kilometraj !== "") && (
+                  <p className="text-slate-600 mb-1">km: {p.kilometraj}</p>
+                )}
+                {p.notes && (
+                  <p className="text-slate-600 mb-1 whitespace-pre-wrap"><span className="text-slate-500">Observații:</span> {p.notes}</p>
+                )}
+                {p.assigned_team && <p className="text-slate-600 mb-1">Echipă: {p.assigned_team}</p>}
                 {p.completed_at && (
-                  <p>Finalizat: {new Date(p.completed_at).toLocaleString("ro")}</p>
+                  <p className="text-slate-600">Finalizat: {new Date(p.completed_at).toLocaleString("ro")}</p>
                 )}
               </div>
             </Popup>
