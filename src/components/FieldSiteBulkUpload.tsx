@@ -30,6 +30,7 @@ export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps
     let unmatched = 0;
     let failed = 0;
     const unmatchedNames: string[] = [];
+    const matched: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -43,13 +44,18 @@ export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps
       }
       const { error } = await uploadFieldSitePdf(supabase, point.id, file);
       if (error) failed++;
-      else ok++;
+      else {
+        ok++;
+        if (matched.length < 6) matched.push(`${file.name} → ${point.code}`);
+      }
     }
 
-    const extras =
+    const extras = [
+      matched.length > 0 ? ` ${matched.join("; ")}${ok > matched.length ? "…" : ""}` : "",
       unmatchedNames.length > 0
         ? ` Nepotrivite: ${unmatchedNames.join(", ")}${unmatched > unmatchedNames.length ? "…" : ""}`
-        : "";
+        : "",
+    ].join("");
     setMessage({
       type: failed > 0 || unmatched > 0 ? "error" : "success",
       text: `Încărcate: ${ok}. Fără foraj potrivit: ${unmatched}. Erori: ${failed}.${extras}`,
@@ -64,9 +70,9 @@ export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps
       <h2 className="px-4 py-3 font-semibold text-slate-800 border-b">Încarcă fișe PDF</h2>
       <div className="p-4 space-y-3">
         <p className="text-sm text-slate-600">
-          Un PDF per foraj. Numele trebuie să conțină codul, ex.{" "}
-          <code className="bg-slate-100 px-1 rounded">Foraj_FI_64+880.pdf</code>. Pozele rămân în PDF,
-          nu se încarcă separat.
+          Un PDF per foraj. <code className="bg-slate-100 px-1 rounded">Foraj_FI_64+880.pdf</code> se
+          leagă de forajul <code className="bg-slate-100 px-1 rounded">FI64+880</code> — underscore-ul
+          se ignoră. Nu redenumi PDF-urile.
         </p>
         <input
           ref={pdfRef}

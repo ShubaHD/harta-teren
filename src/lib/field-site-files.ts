@@ -26,28 +26,35 @@ export function fileRelativePath(file: File): string {
   return rel && rel.length > 0 ? rel : file.name;
 }
 
-/** Foraj_FI_64+880.pdf → forajul FI64+880 / FI_64+880 */
+/**
+ * Foraj_FI_64+880.pdf → FI64+880 (underscore / spații ignorate).
+ * FI_64+880, FI64+880, Fi64+880 sunt același cod.
+ */
 export function matchPathToPoint<T extends { id: string; code: string }>(
   path: string,
   points: T[]
 ): T | null {
-  const parts = path.split(/[/\\]/).map((p) => p.replace(/\.[^.]+$/, ""));
-  const candidates = [
-    ...parts.map((p) => p.replace(/^foraj[_-\s]*/i, "")),
-    ...extractCodesFromPath(path),
-  ];
-  for (const token of candidates) {
-    const found = findExistingPointByCode(points, token);
+  const byNorm = new Map<string, T>();
+  for (const point of points) {
+    const n = normalizeDrillPointCode(point.code);
+    if (n && !byNorm.has(n)) byNorm.set(n, point);
+  }
+
+  const fileBase = (path.split(/[/\\]/).pop() || path).replace(/\.[^.]+$/i, "");
+  const withoutForaj = fileBase.replace(/^foraj[_-\s]*/i, "");
+  const tokens = [withoutForaj, fileBase, ...extractCodesFromPath(path)];
+
+  for (const token of tokens) {
+    const n = normalizeDrillPointCode(token);
+    const found = n ? byNorm.get(n) : undefined;
     if (found) return found;
+    const byFind = findExistingPointByCode(points, token);
+    if (byFind) return byFind;
   }
 
   const haystack = normalizeDrillPointCode(path.replace(/foraj/gi, ""));
-  const sorted = [...points].sort(
-    (a, b) =>
-      normalizeDrillPointCode(b.code).length - normalizeDrillPointCode(a.code).length
-  );
-  for (const point of sorted) {
-    const code = normalizeDrillPointCode(point.code);
+  const sorted = [...byNorm.entries()].sort((a, b) => b[0].length - a[0].length);
+  for (const [code, point] of sorted) {
     if (code.length < 4) continue;
     if (haystack.includes(code)) return point;
   }
@@ -138,5 +145,5 @@ function extensionOf(name: string): string {
 
 function extractCodesFromPath(path: string): string[] {
   const cleaned = path.replace(/foraj[_-\s]*/gi, "");
-  return [...cleaned.matchAll(/[A-Za-z]{1,4}_?\d+\+\d+/g)].map((m) => m[0]);
+  return [...cleaned.matchAll(/[A-Za-z]{1,4}[_-\s]?\d+\+\d+/g)].map((m) => m[0]);
 }
