@@ -34,3 +34,7 @@ env.local.template
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# exemple locale fișe (nu se commit)
+/Poze/
+/Foraj_*.pdf

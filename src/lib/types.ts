@@ -58,6 +58,13 @@ export interface DrillPoint {
   water_during?: string | null;
   water_after_24h?: string | null;
   elevation_h?: string | null;
+  /** Echipare din CSV (ex. Inclinometru) */
+  echipare1?: string | null;
+  echipare2?: string | null;
+  /** Prioritate 1 / 2 / 3 din CSV */
+  prioritate?: string | null;
+  /** Pressuremeter Test din CSV */
+  pressuremeter_test?: string | null;
   /** DPSH, DPM, DPL, DPH – determină fișa de penetrare dinamică */
   tip_penetrare_dinamica?: string | null;
   created_at: string;
@@ -266,4 +273,14 @@ export interface BoreholePhoto {
   rotation: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Fișă PDF extra pe hartă (separat de borehole_photos și exportul din aplicație) */
+export interface FieldSiteFile {
+  id: string;
+  drill_point_id: string;
+  kind: "pdf";
+  filename: string;
+  storage_path: string;
+  created_at: string;
 }

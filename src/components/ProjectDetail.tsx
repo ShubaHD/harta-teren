@@ -9,6 +9,7 @@ import DeleteProjectButton from "./DeleteProjectButton";
 import ResetPointStatusButton from "./ResetPointStatusButton";
 import PointsDashboardTable from "./PointsDashboardTable";
 import PipelineGeoJsonImport from "./PipelineGeoJsonImport";
+import FieldSiteBulkUpload from "./FieldSiteBulkUpload";
 import { fetchAndCacheDrillPointDetail } from "@/lib/offline-form-sync";
 import { resolvePhotosForExport } from "@/lib/resolve-export-photos";
 import { exportZipAsBlob, addForajToZip } from "@/lib/export-foraj";
@@ -180,6 +181,7 @@ export default function ProjectDetail({
           onDeleted={() => router.push("/admin/proiecte")}
         />
       </div>
+      <FieldSiteBulkUpload points={points} />
       <CsvImport projectId={projectId} onImportComplete={() => router.refresh()} />
       <PipelineGeoJsonImport
         projectId={projectId}
@@ -193,6 +195,12 @@ export default function ProjectDetail({
         tableMaxHeight="50vh"
         renderActions={(p) => (
           <span className="inline-flex items-center gap-1 flex-wrap justify-end">
+            <a
+              href={`/documente/${p.id}/pdf`}
+              className="text-xs px-2 py-1 border border-slate-300 rounded hover:bg-slate-50 text-slate-700"
+            >
+              PDF
+            </a>
             {p.status === "finalizat" && (
               <button
                 type="button"

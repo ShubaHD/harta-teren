@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   const admin = createServiceClient();
   const { data: points, error } = await admin
     .from("drill_points")
-    .select("code, lat, lng, elevation_h, kilometraj, notes, adancime_propusa")
+    .select("code, lat, lng, elevation_h, notes, adancime_propusa, echipare1, echipare2, prioritate, pressuremeter_test")
     .eq("project_id", projectId)
     .order("code");
 
@@ -47,16 +47,26 @@ export async function GET(request: NextRequest) {
     .single();
 
   const name = (project?.name ?? "proiect").replace(/\s+/g, "-").replace(/[<>:"/\\|?*]/g, "_");
-  const headers = ["nr", "n", "e", "h", "km", "observatii"];
+  const headers = ["nr.", "n", "e", "z", "h", "Echipare1", "Echipare2", "Observatii", "Prioritate", "Pressuremeter Test"];
   const rows = (points ?? []).map((p) => {
-    const pt = p as { adancime_propusa?: string | null };
+    const pt = p as {
+      adancime_propusa?: string | null;
+      echipare1?: string | null;
+      echipare2?: string | null;
+      prioritate?: string | null;
+      pressuremeter_test?: string | null;
+    };
     return [
       escCsv(p.code),
       escCsv(String(p.lat)),
       escCsv(String(p.lng)),
+      escCsv(p.elevation_h ?? ""),
       escCsv(pt.adancime_propusa ?? ""),
-      escCsv(p.kilometraj ?? ""),
+      escCsv(pt.echipare1 ?? ""),
+      escCsv(pt.echipare2 ?? ""),
       escCsv(p.notes ?? ""),
+      escCsv(pt.prioritate ?? ""),
+      escCsv(pt.pressuremeter_test ?? ""),
     ];
   });
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");

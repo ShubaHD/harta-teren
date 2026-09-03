@@ -16,6 +16,7 @@ const BACKUP_TABLES = [
   "rqd_tcr_scr",
   "borehole_photos",
   "dynamic_penetration_intervals",
+  "field_site_files",
 ] as const;
 
 export async function GET() {

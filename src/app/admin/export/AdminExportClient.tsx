@@ -55,7 +55,7 @@ export default function AdminExportClient({ projects }: AdminExportClientProps) 
       <section className="bg-white rounded-lg border p-4 space-y-3">
         <h2 className="font-semibold text-slate-800">CSV format import</h2>
         <p className="text-sm text-slate-600">
-          Descarcă punctele proiectului în același format ca la upload: <code className="bg-slate-100 px-1 rounded">nr,n,e,h,km,observatii</code>.
+          Descarcă punctele proiectului în același format ca la upload: <code className="bg-slate-100 px-1 rounded">nr.,n,e,z,h,Echipare1,Echipare2,Observatii,Prioritate,Pressuremeter Test</code>.
           Poți folosi fișierul pentru arhivă sau re-import în alt proiect.
         </p>
         <button

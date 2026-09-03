@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   MapContainer,
@@ -12,15 +12,21 @@ import {
   ZoomControl,
 } from "react-leaflet";
 import MapAnnotationsLayer from "./MapAnnotationsLayer";
-import MapLegend from "./MapLegend";
+import type { DrillPoint, DrillPointStatus } from "@/lib/types";
+import { getCsvLabelRows } from "@/lib/drill-point-label";
+import { normalizePrioritate } from "@/lib/csv-import";
+import MapLegend, { type PriorityFilter } from "./MapLegend";
+import BoreholeSearch, { FlyToBorehole } from "./BoreholeSearch";
 import DownloadMapButton from "./DownloadMapButton";
 import PrefetchOfflineButton from "./PrefetchOfflineButton";
 import UserLocationLayer, { distanceToPoint, formatDistance } from "./UserLocationLayer";
+import FieldSitePopupLinks from "./FieldSitePopupLinks";
+import { useFieldSiteIndex } from "@/hooks/useFieldSiteIndex";
+import type { FieldSiteIndexEntry } from "@/lib/field-site-files";
 
 const { BaseLayer } = LayersControl;
 import L from "leaflet";
 import { createClient } from "@/lib/supabase/client";
-import type { DrillPoint, DrillPointStatus } from "@/lib/types";
 import {
   getProfileForOffline,
   saveProfileForOffline,
@@ -66,9 +72,10 @@ interface PointPopupProps {
   projectId?: string;
   userPosition?: { lat: number; lng: number } | null;
   hasUnsynced?: boolean;
+  fieldFiles?: FieldSiteIndexEntry;
 }
 
-function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPosition, hasUnsynced }: PointPopupProps) {
+function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPosition, hasUnsynced, fieldFiles }: PointPopupProps) {
   const supabase = createClient();
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -302,17 +309,18 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
         >
           📋 Fișă
         </Link>
+        <FieldSitePopupLinks
+          pointId={point.id}
+          files={fieldFiles}
+          alwaysShow={!!isAdmin}
+        />
       </div>
-      {point.notes && (
-        <p className="text-xs text-slate-600 mb-2 whitespace-pre-wrap">{point.notes}</p>
-      )}
-      <p className="text-xs text-slate-500 mb-2">Status: {point.status}</p>
-      {(point.adancime_propusa != null && point.adancime_propusa !== "") && (
-        <p className="text-xs text-slate-600 mb-1">Adâncime propusă (h): {point.adancime_propusa} m</p>
-      )}
-      {(point.kilometraj != null && point.kilometraj !== "") && (
-        <p className="text-xs text-slate-600 mb-1">km: {point.kilometraj}</p>
-      )}
+      {getCsvLabelRows(point).map((row) => (
+        <p key={row.label} className="text-xs text-slate-600 mb-0.5 whitespace-pre-wrap">
+          {row.label}: {row.value}
+        </p>
+      ))}
+      <p className="text-xs text-slate-500 mb-2 mt-1">Status: {point.status}</p>
       {hasUnsynced && (
         <p className="mb-2">
           <UnsyncedBadge />
@@ -389,7 +397,11 @@ export default function MapWithPoints({
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<Set<string>>(new Set());
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [focusPointId, setFocusPointId] = useState<string | null>(null);
+  const markerRefs = useRef<Map<string, L.Marker>>(new Map());
   const selectedPoint = selectedPointId ? points.find((p) => p.id === selectedPointId) ?? null : null;
+  const fieldSiteIndex = useFieldSiteIndex(points.map((p) => p.id));
 
   useEffect(() => {
     getPendingUpdates().then((updates) => setPendingPointIds(new Set(updates.map((u) => u.pointId))));
@@ -409,10 +421,35 @@ export default function MapWithPoints({
         }
       : undefined;
 
+  const priorityCounts = {
+    "1": points.filter((p) => normalizePrioritate(p.prioritate) === "1").length,
+    "2": points.filter((p) => normalizePrioritate(p.prioritate) === "2").length,
+    "3": points.filter((p) => normalizePrioritate(p.prioritate) === "3").length,
+  };
+
+  const visiblePoints = points.filter((point) => {
+    if (!isValidLatLng(point.lat, point.lng)) return false;
+    if (priorityFilter === "all") return true;
+    return normalizePrioritate(point.prioritate) === priorityFilter;
+  });
+
   return (
     <div className="h-full w-full min-h-[300px] relative">
       {points.length > 0 ? (
-        <MapLegend statusCounts={statusCounts}>
+        <MapLegend
+          statusCounts={statusCounts}
+          priorityFilter={priorityFilter}
+          onPriorityFilterChange={setPriorityFilter}
+          priorityCounts={priorityCounts}
+        >
+          <BoreholeSearch
+            points={points}
+            onSelect={(id) => {
+              setPriorityFilter("all");
+              setFocusPointId(id);
+              setSelectedPointId(id);
+            }}
+          />
           <PrefetchOfflineButton pointIds={pointIds} projectId={projectId} disabled={isOffline} />
           <DownloadMapButton points={points} />
         </MapLegend>
@@ -456,11 +493,16 @@ export default function MapWithPoints({
           onPositionChange={setUserPosition}
           selectedPoint={selectedPoint}
         />
-        {points.filter((point) => isValidLatLng(point.lat, point.lng)).map((point) => (
+        <FlyToBorehole pointId={focusPointId} points={points} markerRefs={markerRefs} />
+        {visiblePoints.map((point) => (
           <Marker
             key={point.id}
             position={[Number(point.lat), Number(point.lng)]}
             icon={createIcon(STATUS_COLORS[point.status])}
+            ref={(m) => {
+              if (m) markerRefs.current.set(point.id, m);
+              else markerRefs.current.delete(point.id);
+            }}
             eventHandlers={{
               click: () => setSelectedPointId(point.id),
             }}
@@ -477,6 +519,7 @@ export default function MapWithPoints({
                 projectId={projectId}
                 userPosition={userPosition}
                 hasUnsynced={pendingPointIds.has(point.id)}
+                fieldFiles={fieldSiteIndex.get(point.id)}
               />
             </Popup>
           </Marker>
@@ -494,6 +537,7 @@ function PointPopupWithRefresh({
   projectId,
   userPosition,
   hasUnsynced,
+  fieldFiles,
 }: {
   point: DrillPoint;
   onRefresh?: () => void;
@@ -502,6 +546,7 @@ function PointPopupWithRefresh({
   projectId?: string;
   userPosition?: { lat: number; lng: number } | null;
   hasUnsynced?: boolean;
+  fieldFiles?: FieldSiteIndexEntry;
 }) {
   const onUpdate = () => onRefresh?.();
   return (
@@ -513,6 +558,7 @@ function PointPopupWithRefresh({
       projectId={projectId}
       userPosition={userPosition}
       hasUnsynced={hasUnsynced}
+      fieldFiles={fieldFiles}
     />
   );
 }

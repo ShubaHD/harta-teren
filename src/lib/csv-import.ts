@@ -27,21 +27,55 @@ export interface ParsedDrillPoint {
   lng: number;
   notes: string | null;
   kilometraj: string | null;
-  /** Cota / elevație – coloană opțională elevatie/elevation (h = doar adâncime propusă) */
+  /** Cota / elevație – coloană z sau elevatie/elevation (h = doar adâncime propusă) */
   elevation_h: string | null;
-  /** Adâncime propusă (m) – vine doar din coloana h (coloana D) */
+  /** Adâncime propusă (m) – vine doar din coloana h */
   adancime_propusa: string | null;
+  echipare1: string | null;
+  echipare2: string | null;
+  /** "1" | "2" | "3" sau null */
+  prioritate: string | null;
+  pressuremeter_test: string | null;
+}
+
+const normHeader = (s: string) => s.trim().toLowerCase().replace(/[.\s_]/g, "");
+
+/** FI_61+120 și Fi61+120 → FI61+120 (ignoră majuscule, spații, underscore) */
+export function normalizeDrillPointCode(code: string): string {
+  return code.trim().replace(/[\s_]+/g, "").toUpperCase();
+}
+
+export function findExistingPointByCode<T extends { id: string; code: string }>(
+  existing: T[],
+  csvCode: string,
+  usedIds?: Set<string>
+): T | undefined {
+  const available = usedIds ? existing.filter((p) => !usedIds.has(p.id)) : existing;
+  const exact = available.find((p) => p.code === csvCode);
+  if (exact) return exact;
+  const key = normalizeDrillPointCode(csvCode);
+  return available.find((p) => normalizeDrillPointCode(p.code) === key);
+}
+
+/** Extrage 1, 2 sau 3 din valoarea coloanei Prioritate */
+export function normalizePrioritate(raw: string | null | undefined): "1" | "2" | "3" | null {
+  if (raw == null) return null;
+  const t = String(raw).trim();
+  if (!t) return null;
+  const m = t.match(/\b([123])\b/);
+  return m ? (m[1] as "1" | "2" | "3") : null;
 }
 
 /**
- * Parsează un rând CSV în format: nr,n,e,h[,observatii,observatii2,observatii3]
+ * Parsează un rând CSV în format: nr,n,e,z,h,Echipare1,Echipare2,Observatii,Prioritate
+ * (z, echipare și prioritate sunt opționale; rămâne valid și formatul vechi nr,n,e,h)
  */
 export function parseCsvRow(
   row: string[],
   headers: string[]
 ): ParsedDrillPoint | null {
   const getCol = (name: string) => {
-    const i = headers.findIndex((h) => h.trim().toLowerCase() === name.toLowerCase());
+    const i = headers.findIndex((h) => normHeader(h) === normHeader(name));
     return i >= 0 ? (row[i] || "").trim() : "";
   };
 
@@ -57,7 +91,7 @@ export function parseCsvRow(
 
   const hRaw = getCol("h");
   const adancime_propusa = hRaw?.trim() || null;
-  const elevatieRaw = getCol("elevatie") || getCol("elevation");
+  const elevatieRaw = getCol("z") || getCol("elevatie") || getCol("elevation");
   const elevation_h = elevatieRaw?.trim() || null;
   const kilometrajRaw = getCol("km") || getCol("kilometraj");
   const kilometraj = kilometrajRaw?.trim() || null;
@@ -67,6 +101,18 @@ export function parseCsvRow(
   const notes = [obs1, obs2, obs3].filter(Boolean).length
     ? [obs1, obs2, obs3].filter(Boolean).join("\n")
     : null;
+  const echipare1 = getCol("echipare1")?.trim() || null;
+  const echipare2 = getCol("echipare2")?.trim() || null;
+  const prioritate = normalizePrioritate(getCol("prioritate"));
+  const pressuremeterRaw =
+    getCol("pressuremeter test")?.trim() ||
+    getCol("pressuremetertest")?.trim() ||
+    getCol("pressuremeter")?.trim() ||
+    "";
+  const pressuremeter_test =
+    !pressuremeterRaw || /^(0+|0[,.]0*)$/i.test(pressuremeterRaw)
+      ? null
+      : pressuremeterRaw;
 
   return {
     code: code.replace(/\s+/g, " ").trim(),
@@ -76,43 +122,65 @@ export function parseCsvRow(
     kilometraj,
     elevation_h,
     adancime_propusa,
+    echipare1,
+    echipare2,
+    prioritate,
+    pressuremeter_test,
   };
 }
 
 /**
- * Parsează conținutul CSV și returnează lista de puncte
+ * Parsează conținutul CSV și returnează lista de puncte.
+ * Respectă câmpuri între ghilimele cu rânduri noi (ex. Pressuremeter: "4m\\n7m").
  */
 export function parseCsvContent(csvText: string): ParsedDrillPoint[] {
-  const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length < 2) return [];
+  const table = parseCsvToRows(csvText);
+  if (table.length < 2) return [];
 
-  const parseRow = (line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') {
-        inQuotes = !inQuotes;
-      } else if ((c === "," && !inQuotes) || (c === ";" && !inQuotes)) {
-        result.push(current);
-        current = "";
-      } else {
-        current += c;
-      }
-    }
-    result.push(current);
-    return result;
-  };
-
-  const headers = parseRow(lines[0]);
+  const headers = table[0].map((h, i) =>
+    i === 0 ? h.replace(/^\uFEFF/, "") : h
+  );
   const points: ParsedDrillPoint[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const row = parseRow(lines[i]);
-    const point = parseCsvRow(row, headers);
+  for (let i = 1; i < table.length; i++) {
+    const point = parseCsvRow(table[i], headers);
     if (point) points.push(point);
   }
 
   return points;
+}
+
+/** Împarte CSV în rânduri/celule; newline în interiorul ghilimelelor rămâne în celulă. */
+export function parseCsvToRows(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  const text = csvText.replace(/^\uFEFF/, "");
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (!inQuotes && (c === "," || c === ";")) {
+      row.push(current.trim());
+      current = "";
+    } else if (!inQuotes && (c === "\n" || c === "\r")) {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(current.trim());
+      current = "";
+      if (row.some((cell) => cell !== "")) rows.push(row);
+      row = [];
+    } else {
+      current += c;
+    }
+  }
+  row.push(current.trim());
+  if (row.some((cell) => cell !== "")) rows.push(row);
+  return rows;
 }
