@@ -27,8 +27,10 @@ export default async function MapaPage({
   if (!projectsRes.error) projects = projectsRes.data ?? [];
   // Când ești offline, profile/projects pot rămâne goale – MapView încarcă punctele din cache
 
+  const allowedIds = new Set(projects.map((p) => p.id));
+  const requestedId = projectId && allowedIds.has(projectId) ? projectId : null;
   const effectiveProjectId =
-    projectId ?? (projects?.length === 1 ? projects[0].id : null);
+    requestedId ?? (projects?.length === 1 ? projects[0].id : null);
 
   return (
     <div className="h-screen app-fullscreen flex flex-col">
