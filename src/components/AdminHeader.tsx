@@ -24,7 +24,7 @@ export default function AdminHeader() {
         <Link href="/vizitatori" target="_blank" className="text-sm text-slate-600 hover:text-blue-600">
           {t("nav.visitors")}
         </Link>
-        <Link href="/admin/export" className="text-sm text-slate-600 hover:text-blue-600">
+        <Link href="/export" className="text-sm text-slate-600 hover:text-blue-600">
           {t("nav.export")}
         </Link>
         <a

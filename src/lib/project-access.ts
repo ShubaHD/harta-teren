@@ -29,3 +29,16 @@ export async function getVisibleProjects(
   const allowed = new Set(ids);
   return all.filter((p) => allowed.has(p.id));
 }
+
+/** Admin = orice proiect; echipă = doar proiectele din getVisibleProjects. */
+export async function canExportProject(
+  supabase: ServerSupabase,
+  userId: string,
+  role: string | null | undefined,
+  projectId: string
+): Promise<boolean> {
+  if (!projectId) return false;
+  if (role === "admin") return true;
+  const projects = await getVisibleProjects(supabase, userId, role);
+  return projects.some((p) => p.id === projectId);
+}

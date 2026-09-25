@@ -38,6 +38,12 @@ export default function MapPageHeader({
       <div className="flex items-center gap-2 flex-wrap justify-end">
         <LanguageSwitcher />
         <MapProjectSelector projects={projects} selectedId={selectedId} />
+        <Link
+          href="/export"
+          className="text-xs sm:text-sm text-slate-600 hover:text-blue-600 shrink-0 min-h-[44px] inline-flex items-center"
+        >
+          {t("nav.export")}
+        </Link>
         {isAdmin && (
           <Link
             href="/admin"

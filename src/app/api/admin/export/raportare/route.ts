@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { canExportProject } from "@/lib/project-access";
 import { NextRequest, NextResponse } from "next/server";
 
 function formatDDMMYYYYFromDate(d: Date): string {
@@ -31,13 +32,15 @@ export async function GET(request: NextRequest) {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "admin") {
-    return NextResponse.json({ error: "Doar admin" }, { status: 403 });
-  }
 
   const projectId = request.nextUrl.searchParams.get("projectId");
   if (!projectId) {
     return NextResponse.json({ error: "Lipsește projectId" }, { status: 400 });
+  }
+
+  const allowed = await canExportProject(supabase, user.id, profile?.role, projectId);
+  if (!allowed) {
+    return NextResponse.json({ error: "Acces interzis" }, { status: 403 });
   }
 
   const admin = createServiceClient();
