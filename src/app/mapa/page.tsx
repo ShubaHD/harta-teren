@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import MapView from "@/components/MapView";
-import MapProjectSelector from "@/components/MapProjectSelector";
 import ProjectSelectScreen from "@/components/ProjectSelectScreen";
-import BackButton from "@/components/BackButton";
+import MapPageHeader from "@/components/MapPageHeader";
 import OfflinePrepTip from "@/components/OfflinePrepTip";
 
 export default async function MapaPage({
@@ -34,28 +32,11 @@ export default async function MapaPage({
 
   return (
     <div className="h-screen app-fullscreen flex flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-white border-b shrink-0 min-h-0 safe-area-left safe-area-right">
-        <div className="flex items-center gap-2 min-w-0 shrink">
-          <BackButton />
-          <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate">Harta Teren</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <MapProjectSelector
-            projects={projects}
-            selectedId={effectiveProjectId}
-          />
-          {profile?.role === "admin" && (
-            <Link href="/admin" className="text-xs sm:text-sm text-blue-600 hover:underline shrink-0 min-h-[44px] inline-flex items-center">
-              Admin
-            </Link>
-          )}
-          <form action="/auth/signout" method="post" className="shrink-0">
-            <button type="submit" className="text-xs sm:text-sm text-slate-600 hover:text-slate-800 min-h-[44px] px-2 -mx-2 inline-flex items-center touch-manipulation">
-              Ieșire
-            </button>
-          </form>
-        </div>
-      </header>
+      <MapPageHeader
+        projects={projects}
+        selectedId={effectiveProjectId}
+        isAdmin={profile?.role === "admin"}
+      />
       <main className="flex-1 min-h-0">
         {!effectiveProjectId && projects.length > 1 ? (
           <ProjectSelectScreen projects={projects} />

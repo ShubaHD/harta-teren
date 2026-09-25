@@ -6,6 +6,7 @@ import type { MutableRefObject } from "react";
 import type { Marker as LeafletMarker } from "leaflet";
 import type { DrillPoint } from "@/lib/types";
 import { normalizeDrillPointCode } from "@/lib/csv-import";
+import { useI18n } from "./I18nProvider";
 
 function isValidLatLng(lat: unknown, lng: unknown): boolean {
   const a = Number(lat);
@@ -42,6 +43,7 @@ interface BoreholeSearchProps {
 }
 
 export default function BoreholeSearch({ points, onSelect }: BoreholeSearchProps) {
+  const { t } = useI18n();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -80,9 +82,9 @@ export default function BoreholeSearch({ points, onSelect }: BoreholeSearchProps
             choose(matches[0]);
           }
         }}
-        placeholder="Caută foraj..."
+        placeholder={t("search.placeholder")}
         className="w-36 sm:w-44 px-2 py-1.5 min-h-[32px] border border-slate-300 rounded text-xs text-slate-800 bg-white"
-        aria-label="Caută foraj pe hartă"
+        aria-label={t("search.aria")}
       />
       {open && matches.length > 0 && (
         <ul className="absolute right-0 mt-1 w-48 bg-white border rounded shadow-lg z-[1102] max-h-48 overflow-auto text-xs">

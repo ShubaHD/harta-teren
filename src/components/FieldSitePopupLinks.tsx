@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { FieldSiteIndexEntry } from "@/lib/field-site-files";
+import { useI18n } from "./I18nProvider";
 
 interface FieldSitePopupLinksProps {
   pointId: string;
@@ -14,6 +15,7 @@ export default function FieldSitePopupLinks({
   files,
   alwaysShow = false,
 }: FieldSitePopupLinksProps) {
+  const { t } = useI18n();
   const showPdf = alwaysShow || !!files?.hasPdf;
   if (!showPdf) return null;
 
@@ -21,9 +23,9 @@ export default function FieldSitePopupLinks({
     <Link
       href={`/documente/${pointId}/pdf`}
       className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline min-h-[44px] touch-manipulation"
-      title="Fișă de foraj PDF"
+      title={t("map.pdfTitle")}
     >
-      📄 PDF
+      📄 {t("map.pdf")}
     </Link>
   );
 }

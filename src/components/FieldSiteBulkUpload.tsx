@@ -9,12 +9,14 @@ import {
   matchPathToPoint,
   uploadFieldSitePdf,
 } from "@/lib/field-site-files";
+import { useI18n } from "./I18nProvider";
 
 interface FieldSiteBulkUploadProps {
   points: DrillPoint[];
 }
 
 export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps) {
+  const { t } = useI18n();
   const pdfRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
@@ -67,16 +69,9 @@ export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps
 
   return (
     <section className="bg-white rounded-lg border shadow-sm overflow-hidden">
-      <h2 className="px-4 py-3 font-semibold text-slate-800 border-b">Încarcă fișe PDF</h2>
+      <h2 className="px-4 py-3 font-semibold text-slate-800 border-b">{t("pdf.bulkTitle")}</h2>
       <div className="p-4 space-y-3">
-        <p className="text-sm text-slate-600">
-          Un PDF per foraj. Se potrivesc și numele vechi:
-          <code className="bg-slate-100 px-1 rounded">Foraj_Fl_70+860.pdf</code> →{" "}
-          <code className="bg-slate-100 px-1 rounded">FI70+860</code>, cratima{" "}
-          <code className="bg-slate-100 px-1 rounded">FP-68+070</code>, sufixe{" "}
-          <code className="bg-slate-100 px-1 rounded">_Test_Presiometrie</code>. Doar fișierele PDF,
-          nu folderele cu poze.
-        </p>
+        <p className="text-sm text-slate-600">{t("pdf.bulkHint")}</p>
         <input
           ref={pdfRef}
           type="file"

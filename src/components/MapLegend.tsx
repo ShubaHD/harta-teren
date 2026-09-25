@@ -1,9 +1,11 @@
 "use client";
 
+import { useI18n } from "./I18nProvider";
+
 const LEGEND_ITEMS = [
-  { color: "#3b82f6", label: "De făcut", status: "de_facut" as const },
-  { color: "#eab308", label: "În lucru", status: "in_lucru" as const },
-  { color: "#22c55e", label: "Foraj finalizat", status: "finalizat" as const },
+  { color: "#3b82f6", status: "de_facut" as const, key: "legend.todo" as const },
+  { color: "#eab308", status: "in_lucru" as const, key: "legend.progress" as const },
+  { color: "#22c55e", status: "finalizat" as const, key: "legend.done" as const },
 ] as const;
 
 export interface StatusCounts {
@@ -31,8 +33,8 @@ interface MapLegendProps {
   children?: React.ReactNode;
 }
 
-const PRIORITY_BUTTONS: { value: PriorityFilter; label: string }[] = [
-  { value: "all", label: "Toate" },
+const PRIORITY_BUTTONS: { value: PriorityFilter; labelKey?: "legend.all"; label?: string }[] = [
+  { value: "all", labelKey: "legend.all" },
   { value: "1", label: "P1" },
   { value: "2", label: "P2" },
   { value: "3", label: "P3" },
@@ -45,34 +47,36 @@ export default function MapLegend({
   priorityCounts,
   children,
 }: MapLegendProps) {
+  const { t } = useI18n();
   return (
     <div className="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 z-[1000] flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-2 sm:gap-x-3 sm:gap-y-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-white/95 rounded-lg shadow border text-xs">
       <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 min-w-0 shrink">
-        {LEGEND_ITEMS.map(({ color, label, status }) => (
-          <div key={label} className="flex items-center gap-1 shrink-0">
+        {LEGEND_ITEMS.map(({ color, status, key }) => (
+          <div key={status} className="flex items-center gap-1 shrink-0">
             <span
               className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 border-white shadow shrink-0"
               style={{ backgroundColor: color }}
             />
-            <span className="text-slate-700">{label}</span>
+            <span className="text-slate-700">{t(key)}</span>
             {statusCounts != null && (
               <span className="font-semibold text-slate-800">
-                ({statusCounts[status]} <span className="hidden sm:inline">puncte</span>)
+                ({statusCounts[status]} <span className="hidden sm:inline">{t("legend.points")}</span>)
               </span>
             )}
           </div>
         ))}
         {onPriorityFilterChange && (
           <div className="flex items-center gap-1 ml-0 sm:ml-1 pl-0 sm:pl-2 sm:border-l sm:border-slate-200">
-            {PRIORITY_BUTTONS.map(({ value, label }) => {
-              const active = (priorityFilter ?? "all") === value;
+            {PRIORITY_BUTTONS.map((btn) => {
+              const active = (priorityFilter ?? "all") === btn.value;
               const count =
-                value !== "all" && priorityCounts ? priorityCounts[value] : null;
+                btn.value !== "all" && priorityCounts ? priorityCounts[btn.value] : null;
+              const label = btn.labelKey ? t(btn.labelKey) : btn.label;
               return (
                 <button
-                  key={value}
+                  key={btn.value}
                   type="button"
-                  onClick={() => onPriorityFilterChange(value)}
+                  onClick={() => onPriorityFilterChange(btn.value)}
                   className={`px-2 py-1 rounded min-h-[32px] touch-manipulation font-medium ${
                     active
                       ? "bg-slate-800 text-white"

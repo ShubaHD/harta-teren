@@ -13,6 +13,7 @@ import {
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { prefetchDrillPointDetails, getPointIdsMissingCache } from "@/lib/offline-prefetch";
 import PointsDashboardTable from "./PointsDashboardTable";
+import { useI18n } from "./I18nProvider";
 
 const MapWithPoints = dynamic(() => import("./MapWithPoints"), { ssr: false });
 
@@ -29,6 +30,7 @@ export default function MapView({
   initialUserId,
   initialTeamName,
 }: MapViewProps) {
+  const { t } = useI18n();
   const [points, setPoints] = useState<DrillPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
@@ -107,7 +109,7 @@ export default function MapView({
   if (!projectId) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-100">
-        <p className="text-slate-600">Selectează un proiect din meniu.</p>
+        <p className="text-slate-600">{t("map.selectProject")}</p>
       </div>
     );
   }
@@ -115,7 +117,7 @@ export default function MapView({
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-100">
-        <p className="text-slate-600">Se încarcă harta...</p>
+        <p className="text-slate-600">{t("map.loadingMap")}</p>
       </div>
     );
   }
@@ -128,7 +130,7 @@ export default function MapView({
           onClick={() => setShowTable(!showTable)}
           className="text-xs px-2 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-600"
         >
-          {showTable ? "Ascunde tabel" : "Arată tabel"}
+          {showTable ? t("map.hideTable") : t("map.showTable")}
         </button>
       </div>
       {showTable && (

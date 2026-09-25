@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import type { DrillPoint } from "@/lib/types";
 import { cachePoints, getCachedPoints } from "@/lib/offline-store";
 import PointsDashboardTable from "./PointsDashboardTable";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useI18n } from "./I18nProvider";
 
 const VisitorMap = dynamic(() => import("./VisitorMap"), { ssr: false });
 
@@ -15,6 +17,7 @@ interface VisitorViewProps {
 }
 
 export default function VisitorView({ projectId, project, points: initialPoints }: VisitorViewProps) {
+  const { t } = useI18n();
   const projectName = project.name;
   const [points, setPoints] = useState(initialPoints);
   const [showTable, setShowTable] = useState(false);
@@ -74,23 +77,24 @@ export default function VisitorView({ projectId, project, points: initialPoints 
   return (
     <div className="min-h-screen app-fullscreen flex flex-col bg-slate-50">
       <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-white border-b shrink-0 safe-area-left safe-area-right">
-        <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate min-w-0 max-w-[50%] sm:max-w-none" title={`${projectName} — Vizitatori`}>
-          {projectName} — Vizitatori
+        <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate min-w-0 max-w-[50%] sm:max-w-none" title={`${projectName} — ${t("visitors.suffix")}`}>
+          {projectName} — {t("visitors.suffix")}
         </h1>
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <button
             type="button"
             onClick={() => setShowTable(!showTable)}
             className="text-xs px-2 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0"
           >
-            {showTable ? "Ascunde tabel" : "Arată tabel"}
+            {showTable ? t("map.hideTable") : t("map.showTable")}
           </button>
           <button
             type="button"
             onClick={exportCsv}
             className="text-xs sm:text-sm px-3 py-2 min-h-[44px] inline-flex items-center bg-green-600 text-white rounded-lg hover:bg-green-700 shrink-0 whitespace-nowrap touch-manipulation"
           >
-            Export CSV ({completed.length})
+            {t("visitors.exportCsv")} ({completed.length})
           </button>
         </div>
       </header>

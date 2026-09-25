@@ -23,6 +23,7 @@ import UserLocationLayer, { distanceToPoint, formatDistance } from "./UserLocati
 import FieldSitePopupLinks from "./FieldSitePopupLinks";
 import { useFieldSiteIndex } from "@/hooks/useFieldSiteIndex";
 import type { FieldSiteIndexEntry } from "@/lib/field-site-files";
+import { useI18n } from "./I18nProvider";
 
 const { BaseLayer } = LayersControl;
 import L from "leaflet";
@@ -76,6 +77,7 @@ interface PointPopupProps {
 }
 
 function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPosition, hasUnsynced, fieldFiles }: PointPopupProps) {
+  const { t } = useI18n();
   const supabase = createClient();
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +291,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
       <p className="font-semibold text-slate-800">{point.code}</p>
       {showDist && (
         <p className="text-sm text-slate-600 mb-2">
-          📏 Distanță până la tine: <strong>{formatDistance(distM!)}</strong>
+          📏 {t("map.distance")} <strong>{formatDistance(distM!)}</strong>
         </p>
       )}
       <div className="flex flex-wrap gap-2 mb-2">
@@ -298,16 +300,16 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline min-h-[44px] items-center touch-manipulation"
-          title="Deschide în Google Maps"
+          title={t("map.navigateTitle")}
         >
-          🧭 Navighează
+          🧭 {t("map.navigate")}
         </a>
         <Link
           href={`/foraj/${point.id}`}
           className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline min-h-[44px] items-center touch-manipulation"
-          title="Fișă detaliată foraj"
+          title={t("map.formTitle")}
         >
-          📋 Fișă
+          📋 {t("map.form")}
         </Link>
         <FieldSitePopupLinks
           pointId={point.id}
@@ -320,21 +322,30 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
           {row.label}: {row.value}
         </p>
       ))}
-      <p className="text-xs text-slate-500 mb-2 mt-1">Status: {point.status}</p>
+      <p className="text-xs text-slate-500 mb-2 mt-1">
+        {t("map.status")}:{" "}
+        {t(
+          point.status === "in_lucru"
+            ? "status.in_lucru"
+            : point.status === "finalizat"
+              ? "status.finalizat"
+              : "status.de_facut"
+        )}
+      </p>
       {hasUnsynced && (
         <p className="mb-2">
           <UnsyncedBadge />
         </p>
       )}
-      {point.assigned_team && <p className="text-xs text-amber-700 mb-2">Echipă: {point.assigned_team}</p>}
+      {point.assigned_team && <p className="text-xs text-amber-700 mb-2">{t("map.team")}: {point.assigned_team}</p>}
       {canComplete && (
         <div className="mb-2">
-          <label className="block text-xs text-slate-600 mb-1">Adâncime finală (m)</label>
+          <label className="block text-xs text-slate-600 mb-1">{t("map.finalDepth")}</label>
           <input
             type="text"
             value={finalDepth}
             onChange={(e) => setFinalDepth(e.target.value)}
-            placeholder="ex: 12.5 (opțional)"
+            placeholder={t("map.finalDepthPh")}
             className="w-full px-2 py-2.5 min-h-[44px] border rounded text-sm touch-manipulation"
           />
         </div>
@@ -342,15 +353,15 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
       {point.status === "in_lucru" && !canComplete && !isAdmin && (
         <p className="text-xs text-orange-600 mb-2">
           {noTeamAssigned
-            ? "Se încarcă..."
-            : `Punctul e al echipei „${point.assigned_team}”. ${myTeam != null ? `Echipa ta: „${myTeam}” – doar echipa care l-a preluat poate finaliza.` : "Se încarcă..."}`}
+            ? t("map.loading")
+            : `Punctul e al echipei „${point.assigned_team}”. ${myTeam != null ? `Echipa ta: „${myTeam}” – doar echipa care l-a preluat poate finaliza.` : t("map.loading")}`}
         </p>
       )}
       {isOffline && (
-        <p className="text-xs text-amber-600 mb-2">Mod offline – se va sincroniza la revenirea conexiunii.</p>
+        <p className="text-xs text-amber-600 mb-2">{t("map.offline")}</p>
       )}
       {offlineSaved && (
-        <p className="text-xs text-green-600 mb-2 font-medium">✓ Salvat local. Se va sincroniza când revii online.</p>
+        <p className="text-xs text-green-600 mb-2 font-medium">✓ {t("map.savedLocal")}</p>
       )}
       <div className="flex gap-2 flex-wrap">
         {canClaim && (
@@ -359,7 +370,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
             disabled={updating}
             className="px-4 py-2.5 bg-amber-500 text-white text-sm rounded-lg font-medium disabled:opacity-50 min-h-[44px] touch-manipulation"
           >
-            În lucru
+            {t("map.inProgress")}
           </button>
         )}
         {canComplete && (
@@ -368,7 +379,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
             disabled={updating}
             className="px-4 py-2.5 bg-green-600 text-white text-sm rounded-lg font-medium disabled:opacity-50 min-h-[44px] touch-manipulation"
           >
-            Finalizat
+            {t("map.completed")}
           </button>
         )}
       </div>
@@ -394,6 +405,7 @@ export default function MapWithPoints({
   isOffline = false,
   pointIds = [],
 }: MapWithPointsProps) {
+  const { t } = useI18n();
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<Set<string>>(new Set());
@@ -457,7 +469,7 @@ export default function MapWithPoints({
         <>
           <MapLegend />
           <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 px-4 py-2 rounded-lg shadow text-sm text-slate-600">
-            Nu există puncte de afișat. Importă din CSV sau adaugă manual.
+            {t("map.noPoints")}
           </div>
         </>
       )}

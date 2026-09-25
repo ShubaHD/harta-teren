@@ -13,12 +13,15 @@ import {
   isPdfFile,
   uploadFieldSitePdf,
 } from "@/lib/field-site-files";
+import { useI18n } from "./I18nProvider";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 interface FieldSiteDocumentsClientProps {
   pointId: string;
 }
 
 export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocumentsClientProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const supabase = createClient();
   const isAdmin = useIsAdminClient();
@@ -42,7 +45,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
           .maybeSingle(),
       ]);
     if (pointErr || !pointRow) {
-      setError("Forajul nu a fost găsit.");
+      setError(t("pdf.notFound"));
       setLoading(false);
       return;
     }
@@ -57,7 +60,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
     setPoint(pointRow as DrillPoint);
     setPdf((fileRows as FieldSiteFile | null) ?? null);
     setLoading(false);
-  }, [pointId, supabase]);
+  }, [pointId, supabase, t]);
 
   useEffect(() => {
     load();
@@ -67,7 +70,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
     const file = list?.[0];
     if (!file) return;
     if (!isPdfFile(file)) {
-      setError("Selectează un fișier PDF.");
+      setError(t("pdf.pick"));
       return;
     }
     setUploading(true);
@@ -109,23 +112,24 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
           onClick={() => router.back()}
           className="text-sm text-slate-600 hover:text-slate-800 min-h-[44px] px-2 -ml-2"
         >
-          ← Înapoi
+          ← {t("nav.back")}
         </button>
         <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate min-w-0">
-          {point?.code ?? "Foraj"} — Fișă PDF
+          {point?.code ?? "—"} — {t("pdf.sheet")}
         </h1>
+        <LanguageSwitcher className="ml-auto" />
         {point && (
           <Link
             href={`/foraj/${point.id}`}
-            className="text-xs text-blue-600 hover:underline ml-auto shrink-0"
+            className="text-xs text-blue-600 hover:underline shrink-0"
           >
-            Fișa aplicației
+            {t("pdf.appSheet")}
           </Link>
         )}
       </header>
 
       <main className="max-w-5xl mx-auto p-3 sm:p-4 space-y-4">
-        {loading && <p className="text-sm text-slate-500">Se încarcă...</p>}
+        {loading && <p className="text-sm text-slate-500">{t("pdf.loading")}</p>}
         {error && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>
         )}
@@ -133,7 +137,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
         {isAdmin && (
           <div className="bg-white border rounded-lg p-3 space-y-2">
             <p className="text-sm font-medium text-slate-700">
-              {pdf ? "Înlocuiește PDF" : "Încarcă PDF"}
+              {pdf ? t("pdf.replace") : t("pdf.upload")}
             </p>
             <input
               ref={fileInputRef}
@@ -143,12 +147,12 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
               disabled={uploading}
               className="block w-full text-sm text-slate-600"
             />
-            {uploading && <p className="text-xs text-slate-500">Se încarcă...</p>}
+            {uploading && <p className="text-xs text-slate-500">{t("pdf.loading")}</p>}
           </div>
         )}
 
         {!loading && !pdf && (
-          <p className="text-sm text-slate-500">Nu există fișă PDF pentru acest foraj.</p>
+          <p className="text-sm text-slate-500">{t("pdf.none")}</p>
         )}
 
         {pdf && pdfUrl && (
@@ -160,7 +164,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
                 rel="noopener noreferrer"
                 className="px-3 py-2 min-h-[44px] inline-flex items-center bg-slate-800 text-white text-sm rounded-lg touch-manipulation"
               >
-                Deschide PDF
+                {t("pdf.open")}
               </a>
               <button
                 type="button"
@@ -168,7 +172,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
                 disabled={busy}
                 className="px-3 py-2 min-h-[44px] bg-blue-600 text-white text-sm rounded-lg disabled:opacity-50 touch-manipulation"
               >
-                Descarcă PDF
+                {t("pdf.download")}
               </button>
               {isAdmin && (
                 <button
@@ -177,7 +181,7 @@ export default function FieldSiteDocumentsClient({ pointId }: FieldSiteDocuments
                   disabled={busy}
                   className="px-3 py-2 min-h-[44px] text-red-600 text-sm rounded-lg border border-red-200 touch-manipulation"
                 >
-                  Șterge PDF
+                  {t("pdf.delete")}
                 </button>
               )}
             </div>

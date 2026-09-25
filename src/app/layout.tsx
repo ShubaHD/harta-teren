@@ -28,6 +28,7 @@ export const viewport: Viewport = {
 import OfflineIndicator from "@/components/OfflineIndicator";
 import OfflineSyncEffect from "@/components/OfflineSyncEffect";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import { I18nProvider } from "@/components/I18nProvider";
 
 export default function RootLayout({
   children,
@@ -40,10 +41,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="antialiased min-h-screen bg-slate-50 safe-area-top safe-area-bottom safe-area-left safe-area-right">
-        <OfflineIndicator />
-        <OfflineSyncEffect />
-        <PwaInstallPrompt />
-        {children}
+        <I18nProvider>
+          <OfflineIndicator />
+          <OfflineSyncEffect />
+          <PwaInstallPrompt />
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );

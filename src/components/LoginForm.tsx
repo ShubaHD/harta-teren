@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { saveProfileForOffline } from "@/lib/offline-service";
+import { useI18n } from "./I18nProvider";
 
 export default function LoginForm() {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +29,7 @@ export default function LoginForm() {
         err.message?.toLowerCase().includes("fetch");
       setError(
         isNetworkError
-          ? "Nu există conexiune la internet. Conectează-te la rețea și încearcă din nou."
+          ? t("login.offline")
           : err.message
       );
       return;
@@ -63,7 +65,7 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          Email
+          {t("login.email")}
         </label>
         <input
           type="email"
@@ -76,7 +78,7 @@ export default function LoginForm() {
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
-          Parolă
+          {t("login.password")}
         </label>
         <input
           type="password"
@@ -95,7 +97,7 @@ export default function LoginForm() {
         disabled={loading}
         className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
       >
-        {loading ? "Se încarcă..." : "Intră"}
+        {loading ? t("login.loading") : t("login.submit")}
       </button>
     </form>
   );

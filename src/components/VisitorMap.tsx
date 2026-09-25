@@ -11,6 +11,7 @@ import MapLegend, { type PriorityFilter } from "./MapLegend";
 import BoreholeSearch, { FlyToBorehole } from "./BoreholeSearch";
 import FieldSitePopupLinks from "./FieldSitePopupLinks";
 import { useFieldSiteIndex } from "@/hooks/useFieldSiteIndex";
+import { useI18n } from "./I18nProvider";
 
 const { BaseLayer } = LayersControl;
 
@@ -48,6 +49,7 @@ function isValidLatLng(lat: unknown, lng: unknown): boolean {
 }
 
 export default function VisitorMap({ points, projectId }: VisitorMapProps) {
+  const { t, locale } = useI18n();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [focusPointId, setFocusPointId] = useState<string | null>(null);
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
@@ -114,7 +116,7 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-blue-600 hover:underline text-sm min-h-[44px]"
                   >
-                    🧭 Navighează
+                    🧭 {t("map.navigate")}
                   </a>
                   <FieldSitePopupLinks
                     pointId={p.id}
@@ -126,10 +128,19 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
                     {row.label}: {row.value}
                   </p>
                 ))}
-                <p className="text-slate-500 text-xs mb-1 mt-1">Status: {p.status}</p>
-                {p.assigned_team && <p className="text-slate-600 mb-1">Echipă: {p.assigned_team}</p>}
+                <p className="text-slate-500 text-xs mb-1 mt-1">
+                  {t("map.status")}:{" "}
+                  {t(
+                    p.status === "in_lucru"
+                      ? "status.in_lucru"
+                      : p.status === "finalizat"
+                        ? "status.finalizat"
+                        : "status.de_facut"
+                  )}
+                </p>
+                {p.assigned_team && <p className="text-slate-600 mb-1">{t("map.team")}: {p.assigned_team}</p>}
                 {p.completed_at && (
-                  <p className="text-slate-600">Finalizat: {new Date(p.completed_at).toLocaleString("ro")}</p>
+                  <p className="text-slate-600">{t("map.completedAt")}: {new Date(p.completed_at).toLocaleString(locale)}</p>
                 )}
               </div>
             </Popup>

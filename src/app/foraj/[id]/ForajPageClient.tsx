@@ -15,6 +15,8 @@ import {
 import UnsyncedBadge from "@/components/UnsyncedBadge";
 import type { CachedDrillPointDetail } from "@/lib/offline-store";
 import { fetchAndCacheDrillPointDetail } from "@/lib/offline-form-sync";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface ForajPageClientProps {
   drillPointId: string;
@@ -27,6 +29,7 @@ export default function ForajPageClient({
   initialPoint,
   initialProject = null,
 }: ForajPageClientProps) {
+  const { t } = useI18n();
   const [point, setPoint] = useState<DrillPoint | null>(initialPoint);
   const [project, setProject] = useState<Project | null>(initialProject ?? null);
   const [detail, setDetail] = useState<CachedDrillPointDetail | null>(null);
@@ -123,18 +126,18 @@ export default function ForajPageClient({
               onClick={(e) => { e.preventDefault(); window.location.href = backHref; }}
               className="text-slate-600 hover:text-slate-800 text-sm font-medium"
             >
-              ← Înapoi la hartă
+              ← {t("nav.backToMap")}
             </a>
           ) : (
             <Link href="/mapa" className="text-slate-600 hover:text-slate-800 text-sm font-medium">
-              ← Înapoi la hartă
+              ← {t("nav.backToMap")}
             </Link>
           )}
         </header>
         <div className="max-w-2xl mx-auto p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-amber-800 font-medium">Fișa nu este disponibilă offline.</p>
+          <p className="text-amber-800 font-medium">{t("foraj.unavailable")}</p>
           <p className="text-amber-700 text-sm mt-1">
-            Deschide această fișă când ești online pentru a o putea folosi și offline.
+            {t("foraj.unavailableHint")}
           </p>
         </div>
       </div>
@@ -150,26 +153,27 @@ export default function ForajPageClient({
             onClick={(e) => { e.preventDefault(); window.location.href = backHref; }}
             className="text-slate-600 hover:text-slate-800 text-sm font-medium shrink-0 min-h-[44px] inline-flex items-center touch-manipulation"
           >
-            ← Înapoi la hartă
+            ← {t("nav.backToMap")}
           </a>
         ) : (
           <Link
             href={mapHref}
             className="text-slate-600 hover:text-slate-800 text-sm font-medium shrink-0 min-h-[44px] inline-flex items-center touch-manipulation"
           >
-            ← Înapoi la hartă
+            ← {t("nav.backToMap")}
           </Link>
         )}
         <h1 className="font-semibold text-slate-800 truncate min-w-0">
-          Fișă foraj: {point.code}
+          {t("foraj.title")}: {point.code}
         </h1>
+        <LanguageSwitcher className="ml-auto" />
         {isOffline && (
           <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded shrink-0">
             Offline
           </span>
         )}
         {hasUnsyncedForm && (
-          <UnsyncedBadge label="Date nesincronizate" className="shrink-0" />
+          <UnsyncedBadge label={t("foraj.unsynced")} className="shrink-0" />
         )}
       </header>
       <main className="max-w-2xl mx-auto p-4">
