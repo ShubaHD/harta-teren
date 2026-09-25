@@ -30,6 +30,7 @@ export function fileRelativePath(file: File): string {
  * Foraj_FI_64+880.pdf → FI64+880
  * Foraj_Fl_70+860.pdf → FI70+860 (L vs I)
  * Foraj_FP-68+070.pdf → FP68+070 (cratimă)
+ * Foraj_FP73+880.pdf → FP73+880 (fără underscore)
  * Foraj_FP_68+295_Test_Presiometrie.pdf → FP68+295
  */
 export function matchPathToPoint<T extends { id: string; code: string }>(
@@ -37,9 +38,16 @@ export function matchPathToPoint<T extends { id: string; code: string }>(
   points: T[]
 ): T | null {
   const byNorm = new Map<string, T>();
+  const byKm = new Map<string, T[]>();
   for (const point of points) {
-    const n = normalizePdfCode(point.code);
+    const n = normalizePdfCode(point.code).replace(/^FORAJ/, "");
     if (n && !byNorm.has(n)) byNorm.set(n, point);
+    const km = kmFromCompact(n);
+    if (km) {
+      const list = byKm.get(km) ?? [];
+      list.push(point);
+      byKm.set(km, list);
+    }
   }
 
   const fileBase = (path.split(/[/\\]/).pop() || path).replace(/\.[^.]+$/i, "");
@@ -47,14 +55,34 @@ export function matchPathToPoint<T extends { id: string; code: string }>(
   const tokens = [withoutForaj, fileBase, ...extractCodesFromPath(path)];
 
   for (const token of tokens) {
-    const n = normalizePdfCode(token);
+    const n = normalizePdfCode(token).replace(/^FORAJ/, "");
     const found = lookupPdfCode(byNorm, n);
     if (found) return found;
     const byFind = findExistingPointByCode(points, token);
     if (byFind) return byFind;
   }
 
-  const haystack = normalizePdfCode(path.replace(/foraj/gi, ""));
+  const compact = normalizePdfCode(fileBase).replace(/^FORAJ/, "").replace(/[^A-Z0-9+]/g, "");
+  const parsed = compact.match(/^([A-Z]+)(\d+\+\d+)/);
+  if (parsed) {
+    const found = lookupPdfCode(byNorm, parsed[1] + parsed[2]);
+    if (found) return found;
+  }
+
+  const km = parsed?.[2] ?? kmFromCompact(compact);
+  if (km) {
+    const candidates = byKm.get(km) ?? [];
+    if (candidates.length === 1) return candidates[0];
+    if (parsed?.[1] && candidates.length > 1) {
+      const pref = parsed[1] === "FL" ? "FI" : parsed[1];
+      const samePref = candidates.filter(
+        (p) => normalizePdfCode(p.code).replace(/^FORAJ/, "").startsWith(pref)
+      );
+      if (samePref.length === 1) return samePref[0];
+    }
+  }
+
+  const haystack = compact;
   const sorted = [...byNorm.entries()].sort((a, b) => b[0].length - a[0].length);
   for (const [code, point] of sorted) {
     if (code.length < 4) continue;
@@ -157,10 +185,16 @@ function normalizePdfCode(raw: string): string {
 
 function lookupPdfCode<T>(byNorm: Map<string, T>, n: string): T | undefined {
   if (!n) return undefined;
-  const direct = byNorm.get(n);
+  const compact = n.replace(/^FORAJ/, "");
+  const direct = byNorm.get(compact);
   if (direct) return direct;
-  if (n.startsWith("FL") && /^\d/.test(n.slice(2))) {
-    return byNorm.get("FI" + n.slice(2));
+  if (compact.startsWith("FL") && /^\d/.test(compact.slice(2))) {
+    return byNorm.get("FI" + compact.slice(2));
   }
   return undefined;
+}
+
+function kmFromCompact(compact: string): string | null {
+  const m = compact.match(/(\d+\+\d+)/);
+  return m ? m[1] : null;
 }
