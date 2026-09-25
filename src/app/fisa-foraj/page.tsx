@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import FisaForajClient from "./FisaForajClient";
+import { getVisibleProjects } from "@/lib/project-access";
 
 export default async function FisaForajPage({
   searchParams,
@@ -13,26 +14,30 @@ export default async function FisaForajPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, name")
-    .order("name");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const projects = await getVisibleProjects(supabase, user.id, profile?.role);
+  const allowedId =
+    projectId && projects.some((p) => p.id === projectId) ? projectId : undefined;
 
   let points: { id: string; code: string; status: string }[] = [];
   let projectName = "";
 
-  if (projectId) {
+  if (allowedId) {
     const { data: project } = await supabase
       .from("projects")
       .select("id, name")
-      .eq("id", projectId)
+      .eq("id", allowedId)
       .single();
     if (project) {
       projectName = project.name;
       const { data } = await supabase
         .from("drill_points")
         .select("id, code, status")
-        .eq("project_id", projectId)
+        .eq("project_id", allowedId)
         .order("code");
       points = data ?? [];
     }
@@ -52,7 +57,7 @@ export default async function FisaForajPage({
       <main className="flex-1 p-6">
         <FisaForajClient
           projects={projects ?? []}
-          selectedProjectId={projectId ?? null}
+          selectedProjectId={allowedId ?? null}
           points={points}
           projectName={projectName}
         />

@@ -4,6 +4,7 @@ import MapView from "@/components/MapView";
 import ProjectSelectScreen from "@/components/ProjectSelectScreen";
 import MapPageHeader from "@/components/MapPageHeader";
 import OfflinePrepTip from "@/components/OfflinePrepTip";
+import { getVisibleProjects } from "@/lib/project-access";
 
 export default async function MapaPage({
   searchParams,
@@ -18,13 +19,19 @@ export default async function MapaPage({
   if (!session) redirect("/");
 
   let profile: { role?: string; team_name?: string | null } | null = null;
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, team_name")
+    .eq("id", session.user.id)
+    .single();
+  if (!profileError) profile = profileData;
+
   let projects: { id: string; name: string }[] = [];
-  const [profileRes, projectsRes] = await Promise.all([
-    supabase.from("profiles").select("role, team_name").eq("id", session.user.id).single(),
-    supabase.from("projects").select("id, name").order("name"),
-  ]);
-  if (!profileRes.error) profile = profileRes.data;
-  if (!projectsRes.error) projects = projectsRes.data ?? [];
+  try {
+    projects = await getVisibleProjects(supabase, session.user.id, profile?.role);
+  } catch {
+    projects = [];
+  }
   // Când ești offline, profile/projects pot rămâne goale – MapView încarcă punctele din cache
 
   const allowedIds = new Set(projects.map((p) => p.id));

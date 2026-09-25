@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import LoginForm from "@/components/LoginForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useI18n } from "@/components/I18nProvider";
@@ -16,11 +15,6 @@ export default function HomeLogin() {
         <h1 className="text-2xl font-bold text-center text-slate-800 mb-2">{t("app.name")}</h1>
         <p className="text-center text-slate-600 mb-6 text-sm">{t("app.subtitle")}</p>
         <LoginForm />
-        <p className="mt-4 text-center">
-          <Link href="/vizitatori" className="text-sm text-blue-600 hover:underline">
-            {t("login.visitorsLink")}
-          </Link>
-        </p>
       </div>
     </main>
   );

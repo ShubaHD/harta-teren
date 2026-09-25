@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import VisitorView from "@/components/VisitorView";
 
@@ -12,6 +13,18 @@ export default async function VizitatoriPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
+
+  const userSb = await createClient();
+  const { data: { user } } = await userSb.auth.getUser();
+  if (user) {
+    const { data: profile } = await userSb
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    if (profile?.role !== "admin") redirect("/mapa");
+  }
+
   const supabase = createServiceClient();
 
   const { data: project } = await supabase

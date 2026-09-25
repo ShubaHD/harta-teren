@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import BackButton from "./BackButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MapProjectSelector from "./MapProjectSelector";
 import { useI18n } from "./I18nProvider";
@@ -19,7 +18,21 @@ export default function MapPageHeader({
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-white border-b shrink-0 min-h-0 safe-area-left safe-area-right">
       <div className="flex items-center gap-2 min-w-0 shrink">
-        <BackButton />
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            className="text-sm text-slate-600 hover:text-slate-800 min-h-[44px] inline-flex items-center"
+          >
+            ← {t("nav.admin")}
+          </Link>
+        ) : projects.length > 1 ? (
+          <Link
+            href="/mapa"
+            className="text-sm text-slate-600 hover:text-slate-800 min-h-[44px] inline-flex items-center"
+          >
+            ← {t("nav.back")}
+          </Link>
+        ) : null}
         <h1 className="font-semibold text-slate-800 text-sm sm:text-base truncate">{t("app.name")}</h1>
       </div>
       <div className="flex items-center gap-2 flex-wrap justify-end">
