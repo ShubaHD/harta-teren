@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { findExistingPointByCode, normalizeDrillPointCode } from "./csv-import";
+import { findExistingPointByCode } from "./csv-import";
 import type { FieldSiteFile } from "./types";
 
 export const FIELD_SITE_BUCKET = "field-site-files";
@@ -27,8 +27,10 @@ export function fileRelativePath(file: File): string {
 }
 
 /**
- * Foraj_FI_64+880.pdf → FI64+880 (underscore / spații ignorate).
- * FI_64+880, FI64+880, Fi64+880 sunt același cod.
+ * Foraj_FI_64+880.pdf → FI64+880
+ * Foraj_Fl_70+860.pdf → FI70+860 (L vs I)
+ * Foraj_FP-68+070.pdf → FP68+070 (cratimă)
+ * Foraj_FP_68+295_Test_Presiometrie.pdf → FP68+295
  */
 export function matchPathToPoint<T extends { id: string; code: string }>(
   path: string,
@@ -36,7 +38,7 @@ export function matchPathToPoint<T extends { id: string; code: string }>(
 ): T | null {
   const byNorm = new Map<string, T>();
   for (const point of points) {
-    const n = normalizeDrillPointCode(point.code);
+    const n = normalizePdfCode(point.code);
     if (n && !byNorm.has(n)) byNorm.set(n, point);
   }
 
@@ -45,14 +47,14 @@ export function matchPathToPoint<T extends { id: string; code: string }>(
   const tokens = [withoutForaj, fileBase, ...extractCodesFromPath(path)];
 
   for (const token of tokens) {
-    const n = normalizeDrillPointCode(token);
-    const found = n ? byNorm.get(n) : undefined;
+    const n = normalizePdfCode(token);
+    const found = lookupPdfCode(byNorm, n);
     if (found) return found;
     const byFind = findExistingPointByCode(points, token);
     if (byFind) return byFind;
   }
 
-  const haystack = normalizeDrillPointCode(path.replace(/foraj/gi, ""));
+  const haystack = normalizePdfCode(path.replace(/foraj/gi, ""));
   const sorted = [...byNorm.entries()].sort((a, b) => b[0].length - a[0].length);
   for (const [code, point] of sorted) {
     if (code.length < 4) continue;
@@ -146,4 +148,19 @@ function extensionOf(name: string): string {
 function extractCodesFromPath(path: string): string[] {
   const cleaned = path.replace(/foraj[_-\s]*/gi, "");
   return [...cleaned.matchAll(/[A-Za-z]{1,4}[_-\s]?\d+\+\d+/g)].map((m) => m[0]);
+}
+
+/** Ignoră spații, _ și - ; Fl70+860 (L) se încearcă și ca FI70+860. */
+function normalizePdfCode(raw: string): string {
+  return raw.trim().replace(/[\s_\-]+/g, "").toUpperCase();
+}
+
+function lookupPdfCode<T>(byNorm: Map<string, T>, n: string): T | undefined {
+  if (!n) return undefined;
+  const direct = byNorm.get(n);
+  if (direct) return direct;
+  if (n.startsWith("FL") && /^\d/.test(n.slice(2))) {
+    return byNorm.get("FI" + n.slice(2));
+  }
+  return undefined;
 }

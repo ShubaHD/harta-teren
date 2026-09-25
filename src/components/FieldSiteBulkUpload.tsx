@@ -70,9 +70,12 @@ export default function FieldSiteBulkUpload({ points }: FieldSiteBulkUploadProps
       <h2 className="px-4 py-3 font-semibold text-slate-800 border-b">Încarcă fișe PDF</h2>
       <div className="p-4 space-y-3">
         <p className="text-sm text-slate-600">
-          Un PDF per foraj. <code className="bg-slate-100 px-1 rounded">Foraj_FI_64+880.pdf</code> se
-          leagă de forajul <code className="bg-slate-100 px-1 rounded">FI64+880</code> — underscore-ul
-          se ignoră. Nu redenumi PDF-urile.
+          Un PDF per foraj. Se potrivesc și numele vechi:
+          <code className="bg-slate-100 px-1 rounded">Foraj_Fl_70+860.pdf</code> →{" "}
+          <code className="bg-slate-100 px-1 rounded">FI70+860</code>, cratima{" "}
+          <code className="bg-slate-100 px-1 rounded">FP-68+070</code>, sufixe{" "}
+          <code className="bg-slate-100 px-1 rounded">_Test_Presiometrie</code>. Doar fișierele PDF,
+          nu folderele cu poze.
         </p>
         <input
           ref={pdfRef}
