@@ -5,6 +5,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "@geoman-io/leaflet-geoman-free";
 import { createClient } from "@/lib/supabase/client";
+import { useI18n } from "./I18nProvider";
 
 declare global {
   interface Window {
@@ -81,6 +82,7 @@ export default function MapAnnotationsLayer({
   allowedTools,
 }: MapAnnotationsLayerProps) {
   const tools = allowedTools ?? (["line", "arrow", "marker", "text"] as AnnotationType[]);
+  const { t } = useI18n();
   const map = useMap();
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const geomanInitialized = useRef(false);
@@ -565,7 +567,7 @@ export default function MapAnnotationsLayer({
       }
       setMode(null);
 
-      const raw = window.prompt("Text pe hartă:");
+      const raw = window.prompt(t("draw.textPrompt"));
       if (raw == null) return;
       const text = raw.trim();
       if (!text) return;
@@ -641,7 +643,7 @@ export default function MapAnnotationsLayer({
             className="md:hidden px-3 py-2 text-xs font-medium rounded-t-lg w-full flex items-center justify-center gap-1 bg-slate-100 hover:bg-slate-200 touch-manipulation"
             aria-expanded={mobileMenuOpen}
           >
-            ✏️ Desen {mobileMenuOpen ? "▲" : "▼"}
+            ✏️ {t("draw.menu")} {mobileMenuOpen ? "▲" : "▼"}
           </button>
           <div
             className={`flex flex-row flex-wrap gap-1 p-1 ${mobileMenuOpen ? "flex" : "hidden"} md:!flex md:!flex-col`}
@@ -651,9 +653,9 @@ export default function MapAnnotationsLayer({
                 type="button"
                 onClick={() => { setMode(drawMode === "line" ? null : "line"); setMobileMenuOpen(false); }}
                 className={`px-2 py-1 text-xs rounded touch-manipulation ${drawMode === "line" ? "bg-blue-100" : "hover:bg-slate-100"}`}
-                title="Linie"
+                title={t("draw.line")}
               >
-                Linie
+                {t("draw.line")}
               </button>
             )}
             {tools.includes("arrow") && (
@@ -661,9 +663,9 @@ export default function MapAnnotationsLayer({
                 type="button"
                 onClick={() => { setMode(drawMode === "arrow" ? null : "arrow"); setMobileMenuOpen(false); }}
                 className={`px-2 py-1 text-xs rounded touch-manipulation ${drawMode === "arrow" ? "bg-blue-100" : "hover:bg-slate-100"}`}
-                title="Săgeată"
+                title={t("draw.arrow")}
               >
-                Săgeată
+                {t("draw.arrow")}
               </button>
             )}
             {tools.includes("marker") && (
@@ -671,9 +673,9 @@ export default function MapAnnotationsLayer({
                 type="button"
                 onClick={() => { setMode(drawMode === "marker" ? null : "marker"); setMobileMenuOpen(false); }}
                 className={`px-2 py-1 text-xs rounded touch-manipulation ${drawMode === "marker" ? "bg-blue-100" : "hover:bg-slate-100"}`}
-                title="Semn atenționare"
+                title={t("draw.signTitle")}
               >
-                Semn
+                {t("draw.sign")}
               </button>
             )}
             {tools.includes("text") && (
@@ -681,9 +683,9 @@ export default function MapAnnotationsLayer({
                 type="button"
                 onClick={() => { setMode(drawMode === "text" ? null : "text"); setMobileMenuOpen(false); }}
                 className={`px-2 py-1 text-xs rounded touch-manipulation ${drawMode === "text" ? "bg-blue-100" : "hover:bg-slate-100"}`}
-                title="Text"
+                title={t("draw.text")}
               >
-                Text
+                {t("draw.text")}
               </button>
             )}
           </div>
@@ -691,16 +693,16 @@ export default function MapAnnotationsLayer({
       ) : (
         <div className="flex flex-col gap-1 p-1">
           {tools.includes("line") && (
-            <button type="button" onClick={() => setMode(drawMode === "line" ? null : "line")} className={`px-2 py-1 text-xs rounded ${drawMode === "line" ? "bg-blue-100" : "hover:bg-slate-100"}`} title="Linie">Linie</button>
+            <button type="button" onClick={() => setMode(drawMode === "line" ? null : "line")} className={`px-2 py-1 text-xs rounded ${drawMode === "line" ? "bg-blue-100" : "hover:bg-slate-100"}`} title={t("draw.line")}>{t("draw.line")}</button>
           )}
           {tools.includes("arrow") && (
-            <button type="button" onClick={() => setMode(drawMode === "arrow" ? null : "arrow")} className={`px-2 py-1 text-xs rounded ${drawMode === "arrow" ? "bg-blue-100" : "hover:bg-slate-100"}`} title="Săgeată">Săgeată</button>
+            <button type="button" onClick={() => setMode(drawMode === "arrow" ? null : "arrow")} className={`px-2 py-1 text-xs rounded ${drawMode === "arrow" ? "bg-blue-100" : "hover:bg-slate-100"}`} title={t("draw.arrow")}>{t("draw.arrow")}</button>
           )}
           {tools.includes("marker") && (
-            <button type="button" onClick={() => setMode(drawMode === "marker" ? null : "marker")} className={`px-2 py-1 text-xs rounded ${drawMode === "marker" ? "bg-blue-100" : "hover:bg-slate-100"}`} title="Semn atenționare">Semn</button>
+            <button type="button" onClick={() => setMode(drawMode === "marker" ? null : "marker")} className={`px-2 py-1 text-xs rounded ${drawMode === "marker" ? "bg-blue-100" : "hover:bg-slate-100"}`} title={t("draw.signTitle")}>{t("draw.sign")}</button>
           )}
           {tools.includes("text") && (
-            <button type="button" onClick={() => setMode(drawMode === "text" ? null : "text")} className={`px-2 py-1 text-xs rounded ${drawMode === "text" ? "bg-blue-100" : "hover:bg-slate-100"}`} title="Text">Text</button>
+            <button type="button" onClick={() => setMode(drawMode === "text" ? null : "text")} className={`px-2 py-1 text-xs rounded ${drawMode === "text" ? "bg-blue-100" : "hover:bg-slate-100"}`} title={t("draw.text")}>{t("draw.text")}</button>
           )}
         </div>
       )}

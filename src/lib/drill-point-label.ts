@@ -1,39 +1,51 @@
 import type { DrillPoint } from "./types";
+import type { ro } from "./i18n/messages";
 
-export type CsvLabelRow = { label: string; value: string };
+type MessageKey = keyof typeof ro;
 
-function addRow(rows: CsvLabelRow[], label: string, value: unknown) {
+export type CsvLabelRow = {
+  key: MessageKey;
+  value: string;
+  vars?: Record<string, string | number>;
+};
+
+function addRow(
+  rows: CsvLabelRow[],
+  key: MessageKey,
+  value: unknown,
+  vars?: Record<string, string | number>
+) {
   if (value == null) return;
   const v = String(value).trim();
   if (!v) return;
-  rows.push({ label, value: v });
+  rows.push(vars ? { key, value: v, vars } : { key, value: v });
 }
 
 /** Rânduri etichetă CSV: nr., n, e, z, h, Echipare1, Echipare2, Observatii, Prioritate */
 export function getCsvLabelRows(point: DrillPoint): CsvLabelRow[] {
   const rows: CsvLabelRow[] = [];
-  addRow(rows, "nr.", point.code);
-  addRow(rows, "n", point.lat);
-  addRow(rows, "e", point.lng);
-  addRow(rows, "z", point.elevation_h);
+  addRow(rows, "csv.nr", point.code);
+  addRow(rows, "csv.n", point.lat);
+  addRow(rows, "csv.e", point.lng);
+  addRow(rows, "csv.z", point.elevation_h);
   const hVal = point.adancime_propusa?.toString().trim();
   if (hVal) {
     const cifra = hVal.replace(/\s*m\s*$/i, "").trim();
-    addRow(rows, "Adâncime de forat", `${cifra} (m)`);
+    addRow(rows, "csv.depth", `${cifra} (m)`);
   }
-  addRow(rows, "Echipare1", point.echipare1);
-  addRow(rows, "Echipare2", point.echipare2);
-  addRow(rows, "Observatii", point.notes);
-  addRow(rows, "Prioritate", point.prioritate);
+  addRow(rows, "csv.equipment1", point.echipare1);
+  addRow(rows, "csv.equipment2", point.echipare2);
+  addRow(rows, "csv.notes", point.notes);
+  addRow(rows, "csv.priority", point.prioritate);
   const pmtRanges = parsePressuremeterRanges(point.pressuremeter_test);
   if (pmtRanges.length === 1) {
-    addRow(rows, "Pressuremeter Test", pmtRanges[0]);
+    addRow(rows, "csv.pmt", pmtRanges[0]);
   } else {
     pmtRanges.forEach((range, i) => {
-      addRow(rows, `Pressuremeter Test ${i + 1}`, range);
+      addRow(rows, "csv.pmtN", range, { n: i + 1 });
     });
   }
-  addRow(rows, "km", point.kilometraj);
+  addRow(rows, "csv.km", point.kilometraj);
   return rows;
 }
 

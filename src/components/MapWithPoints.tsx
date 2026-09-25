@@ -177,7 +177,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
           if (userId && !profile.team_name && myTeam) profile = { team_name: myTeam };
         } else {
           setUpdating(false);
-          setError("Eroare la autentificare. Încearcă din nou.");
+          setError(t("map.errAuth"));
           return;
         }
       }
@@ -196,7 +196,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
         setTimeout(() => setOfflineSaved(false), 4000);
         onUpdate();
       } catch (e) {
-        setError("Eroare la salvare locală. Încearcă din nou.");
+        setError(t("map.errSaveLocal"));
       }
       setUpdating(false);
       return;
@@ -205,8 +205,8 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
     if (!userId) {
       setError(
         usedOffline
-          ? "Sesiunea nu e disponibilă offline. Conectează-te la internet, deschide harta, apoi poți folosi din nou offline."
-          : "Nu ești autentificat. Conectează-te la internet și reîncearcă."
+          ? t("map.errOfflineSession")
+          : t("map.errNotAuth")
       );
       setUpdating(false);
       return;
@@ -239,8 +239,8 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
       if (err || !updated?.length) {
         setError(
           err?.message
-            ? `Eroare: ${err.message}`
-            : "Punctul a fost preluat de altă echipă sau nu mai poate fi modificat."
+            ? t("map.errPrefix", { msg: err.message })
+            : t("map.errTaken")
         );
         return;
       }
@@ -258,15 +258,15 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
               finalDepth: finalDepthVal?.trim() || null,
             });
             onUpdate();
-            setError("Fără conexiune. Modificarea a fost salvată local și se va sincroniza când revii online.");
+            setError(t("map.errSavedOffline"));
           } else {
-            setError("Fără conexiune. Deschide aplicația online o dată, apoi poți salva offline.");
+            setError(t("map.errNeedOnlineOnce"));
           }
         } catch {
-          setError("Fără conexiune. Încearcă din nou când ai internet.");
+          setError(t("map.errNoConnection"));
         }
       } else {
-        setError("Eroare neașteptată. Încearcă din nou.");
+        setError(t("map.errUnexpected"));
       }
     } finally {
       setUpdating(false);
@@ -318,8 +318,8 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
         />
       </div>
       {getCsvLabelRows(point).map((row) => (
-        <p key={row.label} className="text-xs text-slate-600 mb-0.5 whitespace-pre-wrap">
-          {row.label}: {row.value}
+        <p key={row.key + (row.vars?.n ?? "")} className="text-xs text-slate-600 mb-0.5 whitespace-pre-wrap">
+          {t(row.key, row.vars)}: {row.value}
         </p>
       ))}
       <p className="text-xs text-slate-500 mb-2 mt-1">
@@ -354,7 +354,7 @@ function PointPopup({ point, onUpdate, isAdmin, isOffline, projectId, userPositi
         <p className="text-xs text-orange-600 mb-2">
           {noTeamAssigned
             ? t("map.loading")
-            : `Punctul e al echipei „${point.assigned_team}”. ${myTeam != null ? `Echipa ta: „${myTeam}” – doar echipa care l-a preluat poate finaliza.` : t("map.loading")}`}
+            : `${t("map.teamLocked", { team: point.assigned_team ?? "" })} ${myTeam != null ? t("map.teamLockedYours", { team: myTeam }) : t("map.loading")}`}
         </p>
       )}
       {isOffline && (
@@ -405,7 +405,7 @@ export default function MapWithPoints({
   isOffline = false,
   pointIds = [],
 }: MapWithPointsProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [userPosition, setUserPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [pendingPointIds, setPendingPointIds] = useState<Set<string>>(new Set());
@@ -481,14 +481,14 @@ export default function MapWithPoints({
         zoomControl={false}
       >
         <ZoomControl position="bottomright" />
-        <LayersControl position="bottomleft">
-          <BaseLayer name="Hartă" checked>
+        <LayersControl position="bottomleft" key={locale}>
+          <BaseLayer name={t("map.layerMap")} checked>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
           </BaseLayer>
-          <BaseLayer name="Satelit">
+          <BaseLayer name={t("map.layerSatellite")}>
             <TileLayer
               attribution="Tiles &copy; Esri"
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"

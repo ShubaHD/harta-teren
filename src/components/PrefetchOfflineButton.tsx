@@ -6,6 +6,7 @@ import {
   getPointIdsMissingCache,
   type PrefetchProgress,
 } from "@/lib/offline-prefetch";
+import { useI18n } from "./I18nProvider";
 
 interface PrefetchOfflineButtonProps {
   pointIds: string[];
@@ -23,13 +24,14 @@ async function warmMapPageCache(projectId?: string): Promise<void> {
 }
 
 export default function PrefetchOfflineButton({ pointIds, projectId, disabled }: PrefetchOfflineButtonProps) {
+  const { t } = useI18n();
   const [prefetching, setPrefetching] = useState(false);
   const [progress, setProgress] = useState<PrefetchProgress | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handlePrefetch() {
     if (pointIds.length === 0) {
-      setMessage("Nu există puncte de preîncărcat.");
+      setMessage(t("offline.none"));
       setTimeout(() => setMessage(null), 3000);
       return;
     }
@@ -40,7 +42,7 @@ export default function PrefetchOfflineButton({ pointIds, projectId, disabled }:
       await warmMapPageCache(projectId);
       const missing = await getPointIdsMissingCache(pointIds);
       if (missing.length === 0) {
-        setMessage(`Toate cele ${pointIds.length} fișe sunt deja în cache.`);
+        setMessage(t("offline.allCached", { n: pointIds.length }));
         setPrefetching(false);
         setProgress(null);
         setTimeout(() => setMessage(null), 4000);
@@ -48,10 +50,12 @@ export default function PrefetchOfflineButton({ pointIds, projectId, disabled }:
       }
       const { done, failed } = await prefetchDrillPointDetails(missing, setProgress);
       setMessage(
-        `Gata: ${done} fișe preîncărcate${failed > 0 ? `, ${failed} eșecuri` : ""}. Fișele se vor deschide offline fără să le mai deschizi una câte una.`
+        failed > 0
+          ? t("offline.doneFail", { done, failed })
+          : t("offline.doneOk", { done })
       );
-    } catch (e) {
-      setMessage("Eroare la preîncărcare. Verifică conexiunea.");
+    } catch {
+      setMessage(t("offline.error"));
     }
     setPrefetching(false);
     setProgress(null);
@@ -61,9 +65,9 @@ export default function PrefetchOfflineButton({ pointIds, projectId, disabled }:
   const toFetch = pointIds.length;
   const label = prefetching
     ? progress
-      ? `Se încarcă... ${progress.done + progress.failed}/${progress.total}`
-      : "Se încarcă..."
-    : `Pregătește offline (${toFetch})`;
+      ? t("offline.progress", { done: progress.done + progress.failed, total: progress.total })
+      : t("offline.loading")
+    : t("offline.prepare", { n: toFetch });
 
   const shortLabel = prefetching && progress
     ? `${progress.done + progress.failed}/${progress.total}`
@@ -79,7 +83,7 @@ export default function PrefetchOfflineButton({ pointIds, projectId, disabled }:
         type="button"
         onClick={handlePrefetch}
         disabled={disabled || prefetching || toFetch === 0}
-        title={`Pregătește ${toFetch} fișe pentru utilizare offline`}
+        title={t("offline.prepareTitle", { n: toFetch })}
         className="px-2 py-1 bg-slate-700 text-white text-[11px] sm:text-xs rounded-md font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow touch-manipulation whitespace-nowrap"
       >
         <span className="sm:hidden">📥 {shortLabel}</span>

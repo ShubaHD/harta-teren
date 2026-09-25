@@ -140,6 +140,7 @@ export default function MapView({
             variant="compact"
             linkToForaj={true}
             tableMaxHeight="28vh"
+            title={t("table.points")}
           />
         </div>
       )}

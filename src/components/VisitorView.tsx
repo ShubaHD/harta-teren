@@ -106,6 +106,7 @@ export default function VisitorView({ projectId, project, points: initialPoints 
               variant="compact"
               linkToForaj={false}
               tableMaxHeight="30vh"
+              title={t("table.points")}
             />
           </div>
         )}

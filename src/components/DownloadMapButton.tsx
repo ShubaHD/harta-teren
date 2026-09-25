@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { DrillPoint } from "@/lib/types";
 import { getTileUrlsInBounds, precacheTileUrls } from "@/lib/precache-tiles";
+import { useI18n } from "./I18nProvider";
 
 interface DownloadMapButtonProps {
   points: DrillPoint[];
 }
 
 export default function DownloadMapButton({ points }: DownloadMapButtonProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -41,11 +43,11 @@ export default function DownloadMapButton({ points }: DownloadMapButtonProps) {
         onClick={handleClick}
         disabled={loading}
         className="text-[11px] sm:text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 disabled:opacity-50 touch-manipulation whitespace-nowrap flex items-center"
-        title="Încarcă tile-urile hărții pentru mod offline"
+        title={t("offline.mapTitle")}
       >
         {loading && progress
-          ? `Se descarcă... ${progress.done}/${progress.total}`
-          : "📥 Hartă offline"}
+          ? t("offline.downloading", { done: progress.done, total: progress.total })
+          : `📥 ${t("offline.map")}`}
       </button>
       {loading && (
         <div className="w-20 h-1 bg-slate-200 rounded overflow-hidden">

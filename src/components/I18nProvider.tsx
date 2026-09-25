@@ -6,12 +6,20 @@ import { LANG_STORAGE_KEY, type Locale } from "@/lib/i18n/types";
 import type { ro } from "@/lib/i18n/messages";
 
 type MessageKey = keyof typeof ro;
+type MessageVars = Record<string, string | number>;
 
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: MessageKey) => string;
+  t: (key: MessageKey, vars?: MessageVars) => string;
 };
+
+function interpolate(text: string, vars?: MessageVars): string {
+  if (!vars) return text;
+  return text.replace(/\{(\w+)\}/g, (_, name: string) =>
+    vars[name] != null ? String(vars[name]) : `{${name}}`
+  );
+}
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
@@ -43,7 +51,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: MessageKey) => messages[locale][key] ?? messages.ro[key] ?? key,
+    (key: MessageKey, vars?: MessageVars) =>
+      interpolate(messages[locale][key] ?? messages.ro[key] ?? key, vars),
     [locale]
   );
 

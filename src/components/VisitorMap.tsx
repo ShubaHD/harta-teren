@@ -72,14 +72,14 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
     <div className="visitor-map h-full w-full min-h-[300px] relative">
       <MapContainer center={center} zoom={validPoints.length ? 12 : 8} className="h-full w-full" zoomControl={false}>
         <ZoomControl position="bottomright" />
-        <LayersControl position="topright">
-          <BaseLayer name="Hartă" checked>
+        <LayersControl position="topright" key={locale}>
+          <BaseLayer name={t("map.layerMap")} checked>
             <TileLayer
               attribution='&copy; OpenStreetMap'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
           </BaseLayer>
-          <BaseLayer name="Satelit">
+          <BaseLayer name={t("map.layerSatellite")}>
             <TileLayer
               attribution="Tiles &copy; Esri"
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -124,8 +124,8 @@ export default function VisitorMap({ points, projectId }: VisitorMapProps) {
                   />
                 </div>
                 {getCsvLabelRows(p).map((row) => (
-                  <p key={row.label} className="text-slate-600 mb-0.5 whitespace-pre-wrap">
-                    {row.label}: {row.value}
+                  <p key={row.key + (row.vars?.n ?? "")} className="text-slate-600 mb-0.5 whitespace-pre-wrap">
+                    {t(row.key, row.vars)}: {row.value}
                   </p>
                 ))}
                 <p className="text-slate-500 text-xs mb-1 mt-1">
